@@ -9,7 +9,7 @@ namespace Multiformats.Net.Test
         [TestMethod]
         public void ToStringIp4()
         {
-            var input = new byte[] { 0x4, 0xc0, 0xa8, 0x00, 0x01 };
+            var input = new byte[] {0x4, 0xc0, 0xa8, 0x00, 0x01};
 
             var address = MultiAddress.Create(input);
 

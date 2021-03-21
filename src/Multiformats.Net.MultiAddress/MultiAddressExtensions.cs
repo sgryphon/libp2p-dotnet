@@ -13,6 +13,7 @@ namespace Multiformats.Net
                 var ip4Address = new IPAddress(bytes.Slice(1, 4));
                 return ip4Address;
             }
+
             if (bytes[0] == (byte)Protocol.Ip6)
             {
                 var ip6Address = new IPAddress(bytes.Slice(1, 16));
@@ -21,7 +22,7 @@ namespace Multiformats.Net
 
             throw new InvalidOperationException();
         }
-        
+
         public static IPEndPoint ToIPEndPoint(this MultiAddress multiAddress)
         {
             var bytes = multiAddress.AsSpan();

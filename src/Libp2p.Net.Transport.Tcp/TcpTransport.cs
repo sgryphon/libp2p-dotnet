@@ -1,8 +1,5 @@
-﻿using System;
-using System.Net;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using System.Threading.Tasks;
-using Libp2p.Net;
 using Multiformats.Net;
 
 namespace Libp2p.Net.Transport.Tcp

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Dynamic;
 using System.Net;
 using System.Text;
 
@@ -70,7 +69,7 @@ namespace Multiformats.Net
                 {
                     bytes.Add((byte)Protocol.Tcp);
                     var port = short.Parse(parts[index + 1]);
-                    var valueBytes = new byte[] { (byte)((int)port >> 8), (byte)((int)port & 0xFF)};
+                    var valueBytes = new[] {(byte)(port >> 8), (byte)(port & 0xFF)};
                     bytes.AddRange(valueBytes);
                     index += 2;
                 }
@@ -110,17 +109,19 @@ namespace Multiformats.Net
                     default:
                         throw new NotImplementedException();
                 }
-            } 
+            }
+
             return builder.ToString();
         }
 
         private int ReadVarInt(int index, out int length)
         {
             var value = _bytes[index];
-            if (value > (byte)0x80)
+            if (value > 0x80)
             {
                 throw new NotImplementedException();
             }
+
             length = 1;
             return value;
         }

@@ -1,9 +1,9 @@
-﻿using System.Runtime.InteropServices.ComTypes;
+﻿using System;
 using System.Threading.Tasks;
 
 namespace Libp2p.Net
 {
-    public interface IConnectionListener
+    public interface IConnectionListener : IDisposable
     {
         Task<IConnection> AcceptConnectionAsync();
     }

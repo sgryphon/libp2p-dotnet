@@ -11,7 +11,12 @@ namespace Libp2p.Net.Transport.Tcp
         {
             _tcpClient = tcpClient;
         }
-        
+
+        public void Dispose()
+        {
+            _tcpClient.Dispose();
+        }
+
         public Stream GetStream()
         {
             return _tcpClient.GetStream();
