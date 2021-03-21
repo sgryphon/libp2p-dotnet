@@ -9,4 +9,8 @@
       <ProjectReference Include="..\Libp2p.Net.Abstractions\Libp2p.Net.Abstractions.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="System.IO.Pipelines" Version="5.0.1" />
+    </ItemGroup>
+
 </Project>

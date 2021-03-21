@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Buffers;
 using System.IO;
+using System.IO.Pipelines;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 using Libp2p.Net;
 using Libp2p.Net.Transport.Tcp;
 using Multiformats.Net;
@@ -21,24 +24,14 @@ namespace HelloLibp2p
                 Console.WriteLine("Listening");
                 using var connection = await listener.AcceptConnectionAsync();
                 Console.WriteLine("Accepted connection");
-                await using var stream = connection.GetStream();
-                using var textReader = new StreamReader(stream);
 
                 while (true)
                 {
-                    var line = await textReader.ReadLineAsync();
-                    if (!string.IsNullOrEmpty(line))
-                    {
-                        Console.WriteLine(line);
-                    }
-                    /*
-                    var b = stream.ReadByte();
-                    if (b >= 0)
-                    {   
-                        Console.Write(b.ToString("x2"));
-                    }
-                    */
-
+                    var result = await connection.Input.ReadAsync();
+                    var buffer = result.Buffer;
+                    ReadLine(ref buffer);
+                    connection.Input.AdvanceTo(buffer.Start, buffer.End);
+                    if (result.IsCompleted) break;
                     await Task.Delay(TimeSpan.Zero);
                 }
             }
@@ -48,24 +41,36 @@ namespace HelloLibp2p
                 var connectAddress = MultiAddress.Parse("/ip4/127.0.0.1/tcp/5001");
                 var client = new Libp2pClient(new TcpTransport());
                 using var connection = await client.ConnectAsync(connectAddress);
-                await using var stream = connection.GetStream();
-                await using var textWriter = new StreamWriter(stream);
 
                 Console.WriteLine("Press Enter to send Hello");
                 Console.ReadLine();
                 var sendBytes = Encoding.UTF8.GetBytes("Hello World!\n");
-                await stream.WriteAsync(sendBytes);
-                await stream.FlushAsync();
-                //await textWriter.WriteLineAsync("Hello World!");
-                //await textWriter.FlushAsync();
+                await connection.Output.WriteAsync(sendBytes);
 
                 Console.WriteLine("Press Enter to send Goodbye");
                 Console.ReadLine();
-                await textWriter.WriteLineAsync("Goodbye P2P");
-                await textWriter.FlushAsync();
+                var sendBytes2 = Encoding.UTF8.GetBytes("Goodbye P2P\n");
+                await connection.Output.WriteAsync(sendBytes2);
 
                 Console.WriteLine("Press Enter to exit");
                 Console.ReadLine();
+            }
+        }
+
+        private static void ReadLine(ref ReadOnlySequence<byte> buffer)
+        {
+            var sequenceReader = new SequenceReader<byte>(buffer);
+
+            while (!sequenceReader.End)
+            {
+                while (sequenceReader.TryReadTo(out ReadOnlySpan<byte> line, (byte)'\n'))
+                {
+                    var s = Encoding.UTF8.GetString(line);
+                    Console.WriteLine(s);
+                }
+
+                buffer = buffer.Slice(sequenceReader.Position);
+                sequenceReader.Advance(buffer.Length);
             }
         }
     }
