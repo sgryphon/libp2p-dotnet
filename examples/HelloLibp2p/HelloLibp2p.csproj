@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\src\Libp2p.Net.Transport.Tcp\Libp2p.Net.Transport.Tcp.csproj" />
+      <ProjectReference Include="..\..\src\Libp2p.Net\Libp2p.Net.csproj" />
+      <ProjectReference Include="..\..\src\Multiformats.Net.MultiAddress\Multiformats.Net.MultiAddress.csproj" />
+    </ItemGroup>
+
+</Project>

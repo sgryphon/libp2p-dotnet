@@ -1,0 +1,65 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{F67D1075-AF05-409D-AD08-31A7A9ABB7C2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloLibp2p", "examples\HelloLibp2p\HelloLibp2p.csproj", "{1A67306F-8638-4E42-BE55-68EA7E26BECD}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{D7710D5F-77BD-4C77-B193-8194F042A6B9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Libp2p.Net.Abstractions", "src\Libp2p.Net.Abstractions\Libp2p.Net.Abstractions.csproj", "{20E9EF91-9FDC-41E9-85A2-29DF7CBC08D8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Libp2p.Net.Transport.Tcp", "src\Libp2p.Net.Transport.Tcp\Libp2p.Net.Transport.Tcp.csproj", "{AF6CD46D-4070-4CEA-AD80-DB4053F62C42}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Libp2p.Net", "src\Libp2p.Net\Libp2p.Net.csproj", "{E8A0CAAF-AFD5-45D5-A51C-FD750936CBE8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Multiformats.Net.MultiAddress", "src\Multiformats.Net.MultiAddress\Multiformats.Net.MultiAddress.csproj", "{DA88B771-FB1A-4C2A-82D9-9D197CC1399C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{7B0739F6-89D2-4DD7-BCE9-905EEA5E0F2F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{C7773D12-2716-4529-BD70-EE56B322B157}"
+ProjectSection(SolutionItems) = preProject
+	README.md = README.md
+EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Multiformats.Net.MultiAddress.Test", "test\Multiformats.Net.MultiAddress.Test\Multiformats.Net.MultiAddress.Test.csproj", "{981780ED-2E6F-44E0-BF45-BDA17B151708}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1A67306F-8638-4E42-BE55-68EA7E26BECD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1A67306F-8638-4E42-BE55-68EA7E26BECD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1A67306F-8638-4E42-BE55-68EA7E26BECD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1A67306F-8638-4E42-BE55-68EA7E26BECD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{20E9EF91-9FDC-41E9-85A2-29DF7CBC08D8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{20E9EF91-9FDC-41E9-85A2-29DF7CBC08D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{20E9EF91-9FDC-41E9-85A2-29DF7CBC08D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{20E9EF91-9FDC-41E9-85A2-29DF7CBC08D8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AF6CD46D-4070-4CEA-AD80-DB4053F62C42}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AF6CD46D-4070-4CEA-AD80-DB4053F62C42}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AF6CD46D-4070-4CEA-AD80-DB4053F62C42}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AF6CD46D-4070-4CEA-AD80-DB4053F62C42}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E8A0CAAF-AFD5-45D5-A51C-FD750936CBE8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E8A0CAAF-AFD5-45D5-A51C-FD750936CBE8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E8A0CAAF-AFD5-45D5-A51C-FD750936CBE8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E8A0CAAF-AFD5-45D5-A51C-FD750936CBE8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA88B771-FB1A-4C2A-82D9-9D197CC1399C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA88B771-FB1A-4C2A-82D9-9D197CC1399C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA88B771-FB1A-4C2A-82D9-9D197CC1399C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA88B771-FB1A-4C2A-82D9-9D197CC1399C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{981780ED-2E6F-44E0-BF45-BDA17B151708}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{981780ED-2E6F-44E0-BF45-BDA17B151708}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{981780ED-2E6F-44E0-BF45-BDA17B151708}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{981780ED-2E6F-44E0-BF45-BDA17B151708}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{1A67306F-8638-4E42-BE55-68EA7E26BECD} = {F67D1075-AF05-409D-AD08-31A7A9ABB7C2}
+		{20E9EF91-9FDC-41E9-85A2-29DF7CBC08D8} = {D7710D5F-77BD-4C77-B193-8194F042A6B9}
+		{AF6CD46D-4070-4CEA-AD80-DB4053F62C42} = {D7710D5F-77BD-4C77-B193-8194F042A6B9}
+		{E8A0CAAF-AFD5-45D5-A51C-FD750936CBE8} = {D7710D5F-77BD-4C77-B193-8194F042A6B9}
+		{DA88B771-FB1A-4C2A-82D9-9D197CC1399C} = {D7710D5F-77BD-4C77-B193-8194F042A6B9}
+		{981780ED-2E6F-44E0-BF45-BDA17B151708} = {7B0739F6-89D2-4DD7-BCE9-905EEA5E0F2F}
+	EndGlobalSection
+EndGlobal
