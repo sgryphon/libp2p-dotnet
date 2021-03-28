@@ -48,7 +48,7 @@ namespace Multiformats.Net
                 }
                 else if (name == "ip4")
                 {
-                    bytes.Add((byte)Protocol.Ip4);
+                    bytes.Add((byte)ProtocolType.Ip4);
                     var ipAddress = IPAddress.Parse(parts[index + 1]);
                     //ipAddress.TryWriteBytes()
                     var valueBytes = ipAddress.GetAddressBytes();
@@ -57,7 +57,7 @@ namespace Multiformats.Net
                 }
                 else if (name == "ip6")
                 {
-                    bytes.Add((byte)Protocol.Ip6);
+                    bytes.Add((byte)ProtocolType.Ip6);
                     var ipAddress = IPAddress.Parse(parts[index + 1]);
                     // TODO: ipAddress.TryWriteBytes()
                     // TODO: Need to check byte order
@@ -67,7 +67,7 @@ namespace Multiformats.Net
                 }
                 else if (name == "tcp")
                 {
-                    bytes.Add((byte)Protocol.Tcp);
+                    bytes.Add((byte)ProtocolType.Tcp);
                     var port = short.Parse(parts[index + 1]);
                     var valueBytes = new[] {(byte)(port >> 8), (byte)(port & 0xFF)};
                     bytes.AddRange(valueBytes);
@@ -88,19 +88,19 @@ namespace Multiformats.Net
                 index += length;
                 switch (code)
                 {
-                    case (int)Protocol.Ip4:
+                    case (int)ProtocolType.Ip4:
                         builder.Append("/ip4");
                         var ip4Address = new IPAddress(_bytes.AsSpan().Slice(index, 4));
                         builder.AppendFormat("/{0}", ip4Address);
                         index += 4;
                         break;
-                    case (int)Protocol.Ip6:
+                    case (int)ProtocolType.Ip6:
                         builder.Append("/ip6/");
                         var ip6Address = new IPAddress(_bytes.AsSpan().Slice(index, 16));
                         builder.AppendFormat("/{0}", ip6Address);
                         index += 16;
                         break;
-                    case (int)Protocol.Tcp:
+                    case (int)ProtocolType.Tcp:
                         builder.Append("/tcp/");
                         var tcpPort = BitConverter.ToInt16(_bytes.AsSpan().Slice(index, 2));
                         builder.AppendFormat("/{0}", tcpPort);

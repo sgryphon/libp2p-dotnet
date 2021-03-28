@@ -10,4 +10,8 @@
       <ProjectReference Include="..\Multiformats.Net.MultiAddress\Multiformats.Net.MultiAddress.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="System.IO.Pipelines" Version="5.0.1" />
+    </ItemGroup>
+
 </Project>

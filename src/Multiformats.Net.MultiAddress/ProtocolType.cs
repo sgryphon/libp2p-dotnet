@@ -1,6 +1,6 @@
 ﻿namespace Multiformats.Net
 {
-    public enum Protocol
+    public enum ProtocolType
     {
         Ip4 = 0x4,
         Tcp = 0x6,

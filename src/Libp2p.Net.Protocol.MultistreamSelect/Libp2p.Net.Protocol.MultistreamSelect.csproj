@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <RootNamespace>Libp2p.Net.Protocol</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Google.Protobuf" Version="3.15.6" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Libp2p.Net.Abstractions\Libp2p.Net.Abstractions.csproj" />
+    </ItemGroup>
+
+</Project>

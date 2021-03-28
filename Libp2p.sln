@@ -21,7 +21,11 @@ ProjectSection(SolutionItems) = preProject
 	README.md = README.md
 EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Multiformats.Net.MultiAddress.Test", "test\Multiformats.Net.MultiAddress.Test\Multiformats.Net.MultiAddress.Test.csproj", "{981780ED-2E6F-44E0-BF45-BDA17B151708}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Multiformats.Net.MultiAddress.Tests", "test\Multiformats.Net.MultiAddress.Tests\Multiformats.Net.MultiAddress.Tests.csproj", "{981780ED-2E6F-44E0-BF45-BDA17B151708}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Libp2p.Net.Protocol.MultistreamSelect", "src\Libp2p.Net.Protocol.MultistreamSelect\Libp2p.Net.Protocol.MultistreamSelect.csproj", "{782BF3D8-0BE6-47DE-BC3F-F0A6A64301F4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Libp2p.Net.Protocol.MultistreamSelect.Tests", "test\Libp2p.Net.Protocol.MultistreamSelect.Tests\Libp2p.Net.Protocol.MultistreamSelect.Tests.csproj", "{346BE4FB-AFF8-4D96-8536-D67AF68AADAF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -53,6 +57,14 @@ Global
 		{981780ED-2E6F-44E0-BF45-BDA17B151708}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{981780ED-2E6F-44E0-BF45-BDA17B151708}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{981780ED-2E6F-44E0-BF45-BDA17B151708}.Release|Any CPU.Build.0 = Release|Any CPU
+		{782BF3D8-0BE6-47DE-BC3F-F0A6A64301F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{782BF3D8-0BE6-47DE-BC3F-F0A6A64301F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{782BF3D8-0BE6-47DE-BC3F-F0A6A64301F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{782BF3D8-0BE6-47DE-BC3F-F0A6A64301F4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{346BE4FB-AFF8-4D96-8536-D67AF68AADAF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{346BE4FB-AFF8-4D96-8536-D67AF68AADAF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{346BE4FB-AFF8-4D96-8536-D67AF68AADAF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{346BE4FB-AFF8-4D96-8536-D67AF68AADAF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{1A67306F-8638-4E42-BE55-68EA7E26BECD} = {F67D1075-AF05-409D-AD08-31A7A9ABB7C2}
@@ -61,5 +73,7 @@ Global
 		{E8A0CAAF-AFD5-45D5-A51C-FD750936CBE8} = {D7710D5F-77BD-4C77-B193-8194F042A6B9}
 		{DA88B771-FB1A-4C2A-82D9-9D197CC1399C} = {D7710D5F-77BD-4C77-B193-8194F042A6B9}
 		{981780ED-2E6F-44E0-BF45-BDA17B151708} = {7B0739F6-89D2-4DD7-BCE9-905EEA5E0F2F}
+		{782BF3D8-0BE6-47DE-BC3F-F0A6A64301F4} = {D7710D5F-77BD-4C77-B193-8194F042A6B9}
+		{346BE4FB-AFF8-4D96-8536-D67AF68AADAF} = {7B0739F6-89D2-4DD7-BCE9-905EEA5E0F2F}
 	EndGlobalSection
 EndGlobal

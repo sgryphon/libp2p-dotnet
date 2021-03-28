@@ -1,7 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Shouldly;
 
-namespace Multiformats.Net.Test
+namespace Multiformats.Net.Tests
 {
     [TestClass]
     public class MultiAddressExtensions

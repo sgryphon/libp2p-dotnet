@@ -8,13 +8,13 @@ namespace Multiformats.Net
         public static IPAddress ToIPAddress(this MultiAddress multiAddress)
         {
             var bytes = multiAddress.AsSpan();
-            if (bytes[0] == (byte)Protocol.Ip4)
+            if (bytes[0] == (byte)ProtocolType.Ip4)
             {
                 var ip4Address = new IPAddress(bytes.Slice(1, 4));
                 return ip4Address;
             }
 
-            if (bytes[0] == (byte)Protocol.Ip6)
+            if (bytes[0] == (byte)ProtocolType.Ip6)
             {
                 var ip6Address = new IPAddress(bytes.Slice(1, 16));
                 return ip6Address;
@@ -27,11 +27,11 @@ namespace Multiformats.Net
         {
             var bytes = multiAddress.AsSpan();
             var ipLength = 0;
-            if (bytes[0] == (byte)Protocol.Ip4)
+            if (bytes[0] == (byte)ProtocolType.Ip4)
             {
                 ipLength = 4;
             }
-            else if (bytes[0] == (byte)Protocol.Ip6)
+            else if (bytes[0] == (byte)ProtocolType.Ip6)
             {
                 ipLength = 16;
             }
@@ -40,7 +40,7 @@ namespace Multiformats.Net
                 throw new InvalidOperationException();
             }
 
-            if (bytes[1 + ipLength] != (byte)Protocol.Tcp)
+            if (bytes[1 + ipLength] != (byte)ProtocolType.Tcp)
             {
                 throw new InvalidOperationException();
             }
