@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 
 namespace Libp2p.Net.Protocol
 {
-    public class MultistreamSelect1 : IProtocolSelect
+    public class MultistreamSelect1 : Dictionary<string, IProtocol>, IProtocolSelect
     {
         private const string identifier = "/multistream/1.0.0";
         private static byte[] headerBytes;
@@ -20,14 +23,10 @@ namespace Libp2p.Net.Protocol
             header.WriteTo(headerBytes.AsSpan(lengthSize));
         }
 
-        public void Start(IConnection connection)
+        public Task StartAsync(IConnection connection, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }
-
-        public void Add(string identifier, IProtocol protocol)
-        {
-            throw new NotImplementedException();
-        }
+        
     }
 }

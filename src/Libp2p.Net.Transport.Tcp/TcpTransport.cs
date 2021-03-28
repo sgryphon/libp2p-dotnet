@@ -1,4 +1,5 @@
 ﻿using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using Multiformats.Net;
 
@@ -6,7 +7,7 @@ namespace Libp2p.Net.Transport.Tcp
 {
     public class TcpTransport : ITransport
     {
-        public async Task<IConnection> ConnectAsync(MultiAddress address)
+        public async Task<IConnection> ConnectAsync(MultiAddress address, CancellationToken cancellationToken = default)
         {
             var endpoint = address.ToIPEndPoint();
             var tcpClient = new TcpClient();
@@ -15,7 +16,7 @@ namespace Libp2p.Net.Transport.Tcp
             return connection;
         }
 
-        public Task<IConnectionListener> ListenAsync(MultiAddress address)
+        public Task<IConnectionListener> ListenAsync(MultiAddress address, CancellationToken cancellationToken = default)
         {
             var endpoint = address.ToIPEndPoint();
             var tcpListener = new TcpListener(endpoint);

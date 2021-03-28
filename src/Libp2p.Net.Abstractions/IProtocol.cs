@@ -1,7 +1,10 @@
-﻿namespace Libp2p.Net
+﻿using System.Threading;
+using System.Threading.Tasks;
+
+namespace Libp2p.Net
 {
     public interface IProtocol
     {
-        void Start(IConnection connection);
+        Task StartAsync(IConnection connection, CancellationToken cancellationToken = default);
     }
 }

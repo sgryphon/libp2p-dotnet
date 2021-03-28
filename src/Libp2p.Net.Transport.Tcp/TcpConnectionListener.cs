@@ -1,4 +1,5 @@
 ﻿using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Libp2p.Net.Transport.Tcp
@@ -12,7 +13,7 @@ namespace Libp2p.Net.Transport.Tcp
             _tcpListener = tcpListener;
         }
 
-        public async Task<IConnection> AcceptConnectionAsync()
+        public async Task<IConnection> AcceptConnectionAsync(CancellationToken cancellationToken = default)
         {
             var tcpClient = await _tcpListener.AcceptTcpClientAsync().ConfigureAwait(false);
             var connection = new TcpConnection(tcpClient);

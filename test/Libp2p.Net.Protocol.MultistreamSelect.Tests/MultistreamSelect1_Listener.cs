@@ -21,7 +21,7 @@ namespace Libp2p.Net.Protocol.Tests
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
             var pipeConnection = new PipeConnection(inputPipe.Reader, outputPipe.Writer);
-            protocolSelect.Start(pipeConnection);
+            await protocolSelect.StartAsync(pipeConnection);
 
             // Act
             await inputPipe.Writer.WriteAsync(new [] {(byte)19});
@@ -39,13 +39,13 @@ namespace Libp2p.Net.Protocol.Tests
         {
             // Arrange
             var testProtocol1 = new TestProtocol();
-            var protocolSelect = new MultistreamSelect1();
+            var protocolSelect = (IProtocolSelect)new MultistreamSelect1();
             protocolSelect.Add("/proto/test/1", testProtocol1);
             
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
             var pipeConnection = new PipeConnection(inputPipe.Reader, outputPipe.Writer);
-            protocolSelect.Start((IConnection) pipeConnection);
+            await protocolSelect.StartAsync(pipeConnection);
             
             // Act
             await inputPipe.Writer.WriteAsync(new [] {(byte)0x19});
@@ -74,7 +74,7 @@ namespace Libp2p.Net.Protocol.Tests
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
             var pipeConnection = new PipeConnection(inputPipe.Reader, outputPipe.Writer);
-            protocolSelect.Start((IConnection) pipeConnection);
+            await protocolSelect.StartAsync(pipeConnection);
             
             // Act
             await inputPipe.Writer.WriteAsync(new [] {(byte)0x19});
@@ -98,15 +98,17 @@ namespace Libp2p.Net.Protocol.Tests
             // Arrange
             var testProtocol1 = new TestProtocol();
             var testProtocolOther = new TestProtocol();
-            var protocolSelect = new MultistreamSelect1();
-            protocolSelect.Add("/proto/test/1", testProtocol1);
-            protocolSelect.Add("/proto/other", testProtocolOther);
-            protocolSelect.Add("/proto/test/2", testProtocol1);
+            var protocolSelect = new MultistreamSelect1()
+            {
+                ["/proto/test/1"] = testProtocol1,
+                ["/proto/other"] = testProtocolOther,
+                ["/proto/test/2"] = testProtocol1,
+            };
             
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
             var pipeConnection = new PipeConnection(inputPipe.Reader, outputPipe.Writer);
-            protocolSelect.Start((IConnection) pipeConnection);
+            await protocolSelect.StartAsync(pipeConnection);
             
             // Act
             await inputPipe.Writer.WriteAsync(new [] {(byte)0x19});
