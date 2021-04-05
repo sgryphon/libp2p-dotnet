@@ -8,12 +8,12 @@ namespace Libp2p.Net.Protocol.Tests
     {
         public readonly IList<IConnection> Connections = new List<IConnection>();
 
+        public string Name => "TestProtocol";
+
         public Task StartAsync(IConnection connection, CancellationToken cancellationToken = default)
         {
             Connections.Add(connection);
             return Task.CompletedTask;
         }
-
-        public string Name { get { return "TestProtocol"; } }
     }
 }

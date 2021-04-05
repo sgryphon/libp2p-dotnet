@@ -4,10 +4,12 @@
         <TargetFramework>netcoreapp3.1</TargetFramework>
         <RootNamespace>Libp2p.Net.Protocol</RootNamespace>
         <Nullable>enable</Nullable>
+        <LangVersion>8</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
       <PackageReference Include="Google.Protobuf" Version="3.15.6" />
+      <PackageReference Include="Microsoft.AspNetCore.Authentication" Version="2.2.0" />
     </ItemGroup>
 
     <ItemGroup>

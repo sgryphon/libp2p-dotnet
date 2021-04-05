@@ -6,6 +6,10 @@
         <IsPackable>false</IsPackable>
 
         <RootNamespace>Libp2p.Net.Protocol.Tests</RootNamespace>
+
+        <Nullable>enable</Nullable>
+
+        <LangVersion>default</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>

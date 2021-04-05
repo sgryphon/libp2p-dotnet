@@ -5,8 +5,8 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
+using Microsoft.AspNetCore.Authentication;
 
 namespace Libp2p.Net.Protocol
 {
@@ -16,18 +16,23 @@ namespace Libp2p.Net.Protocol
         private CancellationToken? _readPipeTaskCancellationToken;
         private const string Identifier = "/multistream/1.0.0";
         private const string Na = "na";
-        private static readonly byte[] s_identifierBytes;
-        private static readonly byte[] s_naBytes;
 
         private readonly DiagnosticSource s_diagnosticSource =
             new DiagnosticListener("Libp2p.Net.Protocol.MultistreamSelect1");
-        
+
+        private static readonly byte[] s_identifierBytes;
+        private static readonly byte[] s_naBytes;
+
         static MultistreamSelect1()
         {
             // Could set the bytes directly, but the string is more maintainable
             s_identifierBytes = GetLengthPrefixedNewlineTerminatedBytes(Identifier);
             s_naBytes = GetLengthPrefixedNewlineTerminatedBytes(Na);
         }
+
+        public string Name => Identifier;
+
+        public static ISystemClock SystemClock { get; set; } = new SystemClock();
 
         public Task StartAsync(IConnection connection, CancellationToken cancellationToken = default)
         {
@@ -38,19 +43,32 @@ namespace Libp2p.Net.Protocol
             return Task.CompletedTask;
         }
 
-        public string Name { get { return Identifier; } }
+        private static class Diagnostics
+        {
+            public const string Exception = "MultistreamSelect.Exception";
+            public const string ProtocolSelected = "MultistreamSelect.ProtocolSelected";
+            public const string ReadPipeActivity = "MultistreamSelect.ReadPipe";
+            public const string ReplyNa = "MultistreamSelect.ReplyNa";
+        }
 
         private static byte[] GetLengthPrefixedNewlineTerminatedBytes(string s)
         {
+            // From the examples, this appears to simply be length prefixed with a protobuf varint;
+            // not an actual protobuf field.
+            // e.g. "na" is encoded (in the examples) as 0x03 0x6e 0x61 0x0a, with '\n' at the end, and length 3.
+            // (A protobuf field would also have the tag, in this case tag = 0x1, left shift 3 to 0x8, plus type 0x2
+            // for varint-length-prefixed, i.e. 0x0a 0x03 0x6e 0x61 0x0a.)
             var length = Encoding.UTF8.GetByteCount(s) + 1;
             if (length >= 128)
+            {
                 throw new NotSupportedException();
-            
+            }
+
             var bytes = new byte[length + 1];
             bytes[0] = (byte)length;
             bytes[length] = (byte)'\n';
             Encoding.UTF8.GetBytes(s, bytes.AsSpan(1, length - 1));
-            
+
             return bytes;
         }
 
@@ -75,7 +93,7 @@ namespace Libp2p.Net.Protocol
                 if (s_diagnosticSource.IsEnabled(Diagnostics.ReadPipeActivity))
                 {
                     activity = new Activity(Diagnostics.ReadPipeActivity);
-                    activity = s_diagnosticSource.StartActivity(activity, null);
+                    activity = s_diagnosticSource.StartActivity(activity, activity);
                 }
 
                 // Match header
@@ -91,17 +109,17 @@ namespace Libp2p.Net.Protocol
                         // TODO: try different protocol
                         return;
                     }
-                    
+
                     if (matchedBytes == s_identifierBytes.Length)
                     {
                         // Header fully matched
                         connection.Input.AdvanceTo(matchedPosition!.Value, matchedPosition.Value);
                         break;
                     }
-                    
+
                     connection.Input.AdvanceTo(buffer.Start, matchedPosition!.Value);
                 }
-                
+
                 // Respond
                 SendIdentifier(connection);
                 await connection.Output.FlushAsync(cancellationToken);
@@ -121,14 +139,20 @@ namespace Libp2p.Net.Protocol
                         if (protocol != null)
                         {
                             if (s_diagnosticSource.IsEnabled(Diagnostics.ProtocolSelected))
+                            {
                                 s_diagnosticSource.Write(Diagnostics.ProtocolSelected, new {Protocol = protocol.Name});
+                            }
+
                             //reply buffer
                             //start protocol
                         }
                         else
                         {
                             if (s_diagnosticSource.IsEnabled(Diagnostics.ReplyNa))
+                            {
                                 s_diagnosticSource.Write(Diagnostics.ReplyNa, null);
+                            }
+
                             SendNa(connection);
                             await connection.Output.FlushAsync(cancellationToken);
                             await connection.Output.CompleteAsync();
@@ -140,13 +164,15 @@ namespace Libp2p.Net.Protocol
             catch (Exception ex)
             {
                 if (s_diagnosticSource.IsEnabled(Diagnostics.Exception))
-                    s_diagnosticSource.Write(Diagnostics.Exception, new {Exception = ex});
+                {
+                    s_diagnosticSource.Write(Diagnostics.Exception, ex);
+                }
             }
             finally
             {
                 if (activity != null)
                 {
-                    s_diagnosticSource.StopActivity(activity, null);
+                    s_diagnosticSource.StopActivity(activity, activity);
                 }
             }
         }
@@ -177,22 +203,20 @@ namespace Libp2p.Net.Protocol
                 var lastCheck = segment.Length >= remainingBytesToMatch.Length;
                 var bytesToCheck = lastCheck ? remainingBytesToMatch.Length : segment.Length;
                 match = segment.Slice(0, bytesToCheck).Span.SequenceEqual(remainingBytesToMatch.Slice(0, bytesToCheck));
-                if (!match) break;
-                
+                if (!match)
+                {
+                    break;
+                }
+
                 checkedPosition = buffer.GetPosition(bytesToCheck, checkedPosition.Value);
                 checkedBytes += bytesToCheck;
-                if (lastCheck) break;
+                if (lastCheck)
+                {
+                    break;
+                }
             }
 
             return match;
-        }
-        
-        private static class Diagnostics
-        {
-            public const string Exception = "MultistreamSelect.Exception";
-            public const string ReadPipeActivity = "MultistreamSelect.ReadPipe";
-            public const string ProtocolSelected = "MultistreamSelect.ProtocolSelected";
-            public const string ReplyNa = "MultistreamSelect.ReplyNa";
         }
     }
 }

@@ -6,6 +6,10 @@
         <IsPackable>false</IsPackable>
 
         <RootNamespace>Multiformats.Net.Tests</RootNamespace>
+
+        <LangVersion>default</LangVersion>
+
+        <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>
