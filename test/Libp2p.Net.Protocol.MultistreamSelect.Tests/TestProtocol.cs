@@ -13,5 +13,7 @@ namespace Libp2p.Net.Protocol.Tests
             Connections.Add(connection);
             return Task.CompletedTask;
         }
+
+        public string Name { get { return "TestProtocol"; } }
     }
 }
