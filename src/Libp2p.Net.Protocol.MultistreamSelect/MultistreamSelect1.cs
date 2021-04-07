@@ -2,19 +2,18 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO.Pipelines;
 using System.Text;
-using System.Text.Unicode;
 using System.Threading;
 using System.Threading.Tasks;
-using Google.Protobuf.WellKnownTypes;
 using Microsoft.AspNetCore.Authentication;
 
 namespace Libp2p.Net.Protocol
 {
     public class MultistreamSelect1 : Dictionary<string, IProtocol>, IProtocolSelect
     {
-        private Task? _readPipeTask;
-        private CancellationToken? _readPipeTaskCancellationToken;
+        private Task? _executingTask;
+        private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
         private const string Identifier = "/multistream/1.0.0";
         private const string Na = "na";
 
@@ -35,12 +34,34 @@ namespace Libp2p.Net.Protocol
 
         public static ISystemClock SystemClock { get; set; } = new SystemClock();
 
+        protected async Task ExecuteAsync(IConnection connection, CancellationToken stoppingToken = default)
+        {
+            try
+            {
+                var protocol = await NegotiateProtocol(connection, stoppingToken);
+                if (protocol != null)
+                {
+                    await protocol.StartAsync(connection, stoppingToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (s_diagnosticSource.IsEnabled(Diagnostics.Exception))
+                {
+                    s_diagnosticSource.Write(Diagnostics.Exception, ex);
+                }
+            }
+        }
+
         public Task StartAsync(IConnection connection, CancellationToken cancellationToken = default)
         {
-            _readPipeTaskCancellationToken = new CancellationToken();
-            _readPipeTask = Task.Run(
-                () => ReadPipeAsync(connection, _readPipeTaskCancellationToken.Value),
-                cancellationToken);
+            _executingTask = ExecuteAsync(connection, _stoppingCts.Token);
+            if (_executingTask.IsCompleted)
+            {
+                // Bubble any cancellation or failure
+                return _executingTask;
+            }
+
             return Task.CompletedTask;
         }
 
@@ -73,7 +94,7 @@ namespace Libp2p.Net.Protocol
             return bytes;
         }
 
-        private async Task ReadPipeAsync(IConnection connection, CancellationToken cancellationToken)
+        private async Task<IProtocol?> NegotiateProtocol(IConnection connection, CancellationToken cancellationToken)
         {
             var activity = default(Activity);
             try
@@ -93,9 +114,8 @@ namespace Libp2p.Net.Protocol
                     var buffer = result.Buffer;
                     if (!TryMatchPosition(buffer, ref matchedPosition, ref matchedBytes))
                     {
-                        // Header not matched (different protocol)
-                        // TODO: try different protocol
-                        return;
+                        // Header not matched (different protocol), i.e. try different protocol selection
+                        return null;
                     }
 
                     if (matchedBytes == s_identifierBytes.Length)
@@ -108,12 +128,12 @@ namespace Libp2p.Net.Protocol
                     connection.Input.AdvanceTo(buffer.Start, matchedPosition!.Value);
                 }
 
-                // Respond
-                SendIdentifier(connection);
+                // Respond with header
+                WriteBytes(connection.Output, in s_identifierBytes);
                 await connection.Output.FlushAsync(cancellationToken);
 
                 // Find length
-                var protocolLength = 0;
+                int protocolLength;
                 while (true)
                 {
                     var result = await connection.Input.ReadAsync(cancellationToken).ConfigureAwait(false);
@@ -125,6 +145,7 @@ namespace Libp2p.Net.Protocol
                         protocolLength = length;
                         break;
                     }
+
                     connection.Input.AdvanceTo(buffer.Start, buffer.End);
                 }
 
@@ -136,40 +157,35 @@ namespace Libp2p.Net.Protocol
                     if (buffer.Length >= protocolLength)
                     {
                         // TODO: Should just try and directly match the bytes
-                        var protocolName = Encoding.UTF8.GetString(
-                            buffer.Slice(0, protocolLength).ToArray());
-                        if (TryGetValue(protocolName, out var protocol))
+                        var protocolIdBytes = buffer.Slice(0, protocolLength).ToArray();
+                        var protocolId = Encoding.UTF8.GetString(protocolIdBytes);
+                        if (TryGetValue(protocolId.TrimEnd('\n'), out var protocol))
                         {
                             if (s_diagnosticSource.IsEnabled(Diagnostics.ProtocolSelected))
                             {
-                                s_diagnosticSource.Write(Diagnostics.ProtocolSelected, new {Protocol = protocol.Name});
+                                s_diagnosticSource.Write(Diagnostics.ProtocolSelected,
+                                    new {ProtocolId = protocolId, ProtocolName = protocol.Name});
                             }
 
-                            //reply buffer
-                            //start protocol
+                            WriteVarInt(connection.Output, protocolIdBytes.Length);
+                            WriteBytes(connection.Output, protocolIdBytes);
+                            await connection.Output.FlushAsync(cancellationToken);
+                            return protocol;
                         }
                         else
                         {
                             if (s_diagnosticSource.IsEnabled(Diagnostics.ReplyNa))
                             {
-                                s_diagnosticSource.Write(Diagnostics.ReplyNa, null);
+                                s_diagnosticSource.Write(Diagnostics.ReplyNa, new {ProtocolId = protocolId});
                             }
 
-                            SendNa(connection);
+                            WriteBytes(connection.Output, s_naBytes);
                             await connection.Output.FlushAsync(cancellationToken);
-                            await connection.Output.CompleteAsync();
-                            await connection.Input.CompleteAsync();
-                            break;
+                            return null;
                         }
                     }
+
                     connection.Input.AdvanceTo(buffer.Start, buffer.End);
-                }
-            }
-            catch (Exception ex)
-            {
-                if (s_diagnosticSource.IsEnabled(Diagnostics.Exception))
-                {
-                    s_diagnosticSource.Write(Diagnostics.Exception, ex);
                 }
             }
             finally
@@ -181,46 +197,30 @@ namespace Libp2p.Net.Protocol
             }
         }
 
-        private bool TryReadVarInt(ref ReadOnlySequence<byte> buffer, out long consumed, out int value)
+        private void WriteBytes(PipeWriter pipeWriter, in byte[] bytes)
         {
-            var sequenceReader = new SequenceReader<byte>(buffer);
-            
-            value = 0;
-            while (sequenceReader.TryRead(out var b))
+            var outputBuffer = pipeWriter.GetSpan(bytes.Length);
+            bytes.CopyTo(outputBuffer);
+            pipeWriter.Advance(bytes.Length);
+        }
+
+        private void WriteVarInt(PipeWriter pipeWriter, int value)
+        {
+            // TODO: Check it handles negatives, etc, before making generic
+            var outputBuffer = pipeWriter.GetSpan(5);
+            var index = 0;
+            while (true)
             {
-                if (sequenceReader.Consumed == 5)
+                if (value < 0x80)
                 {
-                    if (b > 0x7)
-                    {
-                        throw new OverflowException("Value to large for Int32");
-                    }
+                    outputBuffer[index] = (byte)value;
+                    break;
                 }
-                
-                if (b < 0x80)
-                {
-                    value = (value << 7) | b;
-                    consumed = sequenceReader.Consumed;
-                    return true;
-                }
-                value = (value << 7) | (b & 0x7F);
+                outputBuffer[index] = (byte)((value & 0x7F) | 0x80);
+                value = value >> 7;
+                index++;
             }
-
-            consumed = 0;
-            return false;
-        }
-
-        private void SendIdentifier(IConnection connection)
-        {
-            var outputBuffer = connection.Output.GetSpan(s_identifierBytes.Length);
-            s_identifierBytes.CopyTo(outputBuffer);
-            connection.Output.Advance(s_identifierBytes.Length);
-        }
-
-        private void SendNa(IConnection connection)
-        {
-            var outputBuffer = connection.Output.GetSpan(s_naBytes.Length);
-            s_naBytes.CopyTo(outputBuffer);
-            connection.Output.Advance(s_naBytes.Length);
+            pipeWriter.Advance(index + 1);
         }
 
         private bool TryMatchPosition(ReadOnlySequence<byte> buffer, ref SequencePosition? checkedPosition,
@@ -249,6 +249,35 @@ namespace Libp2p.Net.Protocol
             }
 
             return match;
+        }
+
+        private bool TryReadVarInt(ref ReadOnlySequence<byte> buffer, out long consumed, out int value)
+        {
+            var sequenceReader = new SequenceReader<byte>(buffer);
+
+            value = 0;
+            while (sequenceReader.TryRead(out var b))
+            {
+                if (sequenceReader.Consumed == 5)
+                {
+                    if (b > 0x7)
+                    {
+                        throw new OverflowException("Value to large for Int32");
+                    }
+                }
+
+                if (b < 0x80)
+                {
+                    value = (value << 7) | b;
+                    consumed = sequenceReader.Consumed;
+                    return true;
+                }
+
+                value = (value << 7) | (b & 0x7F);
+            }
+
+            consumed = 0;
+            return false;
         }
     }
 }

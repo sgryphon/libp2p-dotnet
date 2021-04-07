@@ -60,7 +60,7 @@ namespace Libp2p.Net.Protocol.Tests
             await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
 
             // Assert
-            var bytes = await TryReadBytesAsync(outputPipe.Reader, 20, cancellation.Token);
+            var bytes = await TryReadBytesAsync(outputPipe.Reader, 1 + 19, cancellation.Token);
             bytes[0].ShouldBe((byte)19);
             bytes.AsSpan(1).ToArray().ShouldBe(Encoding.UTF8.GetBytes("/multistream/1.0.0\n"));
         }
@@ -87,7 +87,7 @@ namespace Libp2p.Net.Protocol.Tests
             await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
             
             // Assert
-            var bytes = await TryReadBytesAsync(outputPipe.Reader, 35, cancellation.Token);
+            var bytes = await TryReadBytesAsync(outputPipe.Reader, 1 + 19 + 1 + 14 - 14, cancellation.Token);
             bytes[0].ShouldBe((byte)19);
             bytes[20].ShouldBe((byte)14);
             bytes.AsSpan(21).ToArray().ShouldBe(Encoding.UTF8.GetBytes("/proto/test/1\n"));
@@ -123,7 +123,7 @@ namespace Libp2p.Net.Protocol.Tests
             await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
             
             // Assert
-            var bytes = await TryReadBytesAsync(outputPipe.Reader, 35, cancellation.Token);
+            var bytes = await TryReadBytesAsync(outputPipe.Reader, 1 + 19 + 1 + 14, cancellation.Token);
             bytes[0].ShouldBe((byte)19);
             bytes[20].ShouldBe((byte)14);
             bytes.AsSpan(21).ToArray().ShouldBe(Encoding.UTF8.GetBytes("/proto/test/1\n"));
@@ -175,7 +175,6 @@ namespace Libp2p.Net.Protocol.Tests
             
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
-            var outputStream = outputPipe.Reader.AsStream();
             var pipeConnection = new PipeConnection(inputPipe.Reader, outputPipe.Writer);
             await protocolSelect.StartAsync(pipeConnection, cancellation.Token);
 
@@ -187,7 +186,7 @@ namespace Libp2p.Net.Protocol.Tests
             await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
             
             // Assert
-            var bytes = await TryReadBytesAsync(outputPipe.Reader, 34, cancellation.Token);
+            var bytes = await TryReadBytesAsync(outputPipe.Reader, 1 + 19 + 1 + 13, cancellation.Token);
             bytes[0].ShouldBe((byte)19);
             bytes[20].ShouldBe((byte)13);
             bytes.AsSpan(21).ToArray().ShouldBe(Encoding.UTF8.GetBytes("/proto/other\n"));
