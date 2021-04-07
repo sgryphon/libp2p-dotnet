@@ -60,8 +60,7 @@ namespace Libp2p.Net.Protocol.Tests
             await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
 
             // Assert
-            var result = await outputPipe.Reader.ReadAsync(cancellation.Token);
-            var bytes = result.Buffer.ToArray();
+            var bytes = await TryReadBytesAsync(outputPipe.Reader, 20, cancellation.Token);
             bytes[0].ShouldBe((byte)19);
             bytes.AsSpan(1).ToArray().ShouldBe(Encoding.UTF8.GetBytes("/multistream/1.0.0\n"));
         }
@@ -88,8 +87,7 @@ namespace Libp2p.Net.Protocol.Tests
             await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
             
             // Assert
-            var result = await outputPipe.Reader.ReadAsync(cancellation.Token);
-            var bytes = result.Buffer.ToArray();
+            var bytes = await TryReadBytesAsync(outputPipe.Reader, 35, cancellation.Token);
             bytes[0].ShouldBe((byte)19);
             bytes[20].ShouldBe((byte)14);
             bytes.AsSpan(21).ToArray().ShouldBe(Encoding.UTF8.GetBytes("/proto/test/1\n"));
@@ -125,8 +123,7 @@ namespace Libp2p.Net.Protocol.Tests
             await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
             
             // Assert
-            var result = await outputPipe.Reader.ReadAsync(cancellation.Token);
-            var bytes = result.Buffer.ToArray();
+            var bytes = await TryReadBytesAsync(outputPipe.Reader, 35, cancellation.Token);
             bytes[0].ShouldBe((byte)19);
             bytes[20].ShouldBe((byte)14);
             bytes.AsSpan(21).ToArray().ShouldBe(Encoding.UTF8.GetBytes("/proto/test/1\n"));
@@ -155,14 +152,13 @@ namespace Libp2p.Net.Protocol.Tests
             await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
             
             // Assert
-            var result = await outputPipe.Reader.ReadAsync(cancellation.Token);
-            var bytes = result.Buffer.ToArray();
+            var bytes = await TryReadBytesAsync(outputPipe.Reader, 1 + 19 + 1 + 3, cancellation.Token);
             bytes[0].ShouldBe((byte)19);
             bytes[20].ShouldBe((byte)3);
             bytes.AsSpan(21).ToArray().ShouldBe(Encoding.UTF8.GetBytes("na\n"));
             testProtocol1.Connections.Count.ShouldBe(0);
         }
-        
+
         [TestMethod]
         public async Task SelectProtocolFromList()
         {
@@ -191,13 +187,30 @@ namespace Libp2p.Net.Protocol.Tests
             await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
             
             // Assert
-            var result = await outputPipe.Reader.ReadAsync(cancellation.Token);
-            var bytes = result.Buffer.ToArray();
+            var bytes = await TryReadBytesAsync(outputPipe.Reader, 34, cancellation.Token);
             bytes[0].ShouldBe((byte)19);
             bytes[20].ShouldBe((byte)13);
             bytes.AsSpan(21).ToArray().ShouldBe(Encoding.UTF8.GetBytes("/proto/other\n"));
             testProtocol1.Connections.Count.ShouldBe(0);
             testProtocolOther.Connections.Count.ShouldBe(1);
+        }
+
+        private static async Task<byte[]> TryReadBytesAsync(PipeReader pipeReader, int count, CancellationToken cancellationToken)
+        {
+            byte[] bytes;
+            while (true)
+            {
+                var result = await pipeReader.ReadAsync(cancellationToken);
+                if (result.Buffer.Length >= count || cancellationToken.IsCancellationRequested)
+                {
+                    bytes = result.Buffer.ToArray();
+                    pipeReader.AdvanceTo(result.Buffer.End, result.Buffer.End);
+                    break;
+                }
+                pipeReader.AdvanceTo(result.Buffer.Start, result.Buffer.End);
+            }
+
+            return bytes;
         }
     }
 }
