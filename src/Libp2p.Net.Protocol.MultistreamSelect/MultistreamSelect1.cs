@@ -197,32 +197,6 @@ namespace Libp2p.Net.Protocol
             }
         }
 
-        private void WriteBytes(PipeWriter pipeWriter, in byte[] bytes)
-        {
-            var outputBuffer = pipeWriter.GetSpan(bytes.Length);
-            bytes.CopyTo(outputBuffer);
-            pipeWriter.Advance(bytes.Length);
-        }
-
-        private void WriteVarInt(PipeWriter pipeWriter, int value)
-        {
-            // TODO: Check it handles negatives, etc, before making generic
-            var outputBuffer = pipeWriter.GetSpan(5);
-            var index = 0;
-            while (true)
-            {
-                if (value < 0x80)
-                {
-                    outputBuffer[index] = (byte)value;
-                    break;
-                }
-                outputBuffer[index] = (byte)((value & 0x7F) | 0x80);
-                value = value >> 7;
-                index++;
-            }
-            pipeWriter.Advance(index + 1);
-        }
-
         private bool TryMatchPosition(ReadOnlySequence<byte> buffer, ref SequencePosition? checkedPosition,
             ref int checkedBytes)
         {
@@ -278,6 +252,34 @@ namespace Libp2p.Net.Protocol
 
             consumed = 0;
             return false;
+        }
+
+        private void WriteBytes(PipeWriter pipeWriter, in byte[] bytes)
+        {
+            var outputBuffer = pipeWriter.GetSpan(bytes.Length);
+            bytes.CopyTo(outputBuffer);
+            pipeWriter.Advance(bytes.Length);
+        }
+
+        private void WriteVarInt(PipeWriter pipeWriter, int value)
+        {
+            // TODO: Check it handles negatives, etc, before making generic
+            var outputBuffer = pipeWriter.GetSpan(5);
+            var index = 0;
+            while (true)
+            {
+                if (value < 0x80)
+                {
+                    outputBuffer[index] = (byte)value;
+                    break;
+                }
+
+                outputBuffer[index] = (byte)((value & 0x7F) | 0x80);
+                value = value >> 7;
+                index++;
+            }
+
+            pipeWriter.Advance(index + 1);
         }
     }
 }
