@@ -24,6 +24,7 @@
       <ProjectReference Include="..\..\src\Libp2p.Net.Abstractions\Libp2p.Net.Abstractions.csproj" />
       <ProjectReference Include="..\..\src\Libp2p.Net.Protocol.MultistreamSelect\Libp2p.Net.Protocol.MultistreamSelect.csproj" />
       <ProjectReference Include="..\..\src\Libp2p.Net\Libp2p.Net.csproj" />
+      <ProjectReference Include="..\Libp2p.UnitTesting\Libp2p.UnitTesting.csproj" />
     </ItemGroup>
 
   <ItemGroup>

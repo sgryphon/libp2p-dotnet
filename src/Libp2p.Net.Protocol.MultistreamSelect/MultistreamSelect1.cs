@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication;
 
 namespace Libp2p.Net.Protocol
 {
+    // See: https://github.com/multiformats/multistream-select
     public class MultistreamSelect1 : Dictionary<string, IProtocol>, IProtocolSelect
     {
         private Task? _executingTask;

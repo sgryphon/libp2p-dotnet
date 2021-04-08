@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+      <Nullable>enable</Nullable>
+      <RootNamespace>LIbp2p.UnitTesting</RootNamespace>
+    </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="System.IO.Pipelines" Version="5.0.1" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Libp2p.Net.Abstractions\Libp2p.Net.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,5 +1,4 @@
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Pipelines;
@@ -7,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Libp2p.Net.Transport;
+using Libp2p.UnitTesting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Shouldly;
 
@@ -60,8 +60,8 @@ namespace Libp2p.Net.Protocol.Tests
             await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
 
             // Assert
-            var bytes = await ReadBytesTimeoutAsync(outputPipe.Reader, 1 + 19, TimeSpan.FromMilliseconds(100),
-                cancellation.Token);
+            var bytes = await PipeUtility.ReadBytesTimeoutAsync(outputPipe.Reader, 1 + 19,
+                TimeSpan.FromMilliseconds(100), cancellation.Token);
             bytes[0].ShouldBe((byte)19);
             bytes.AsSpan(1).ToArray().ShouldBe(Encoding.UTF8.GetBytes("/multistream/1.0.0\n"));
         }
@@ -88,8 +88,8 @@ namespace Libp2p.Net.Protocol.Tests
             await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
             
             // Assert
-            var bytes = await ReadBytesTimeoutAsync(outputPipe.Reader, 1 + 19 + 1 + 14, TimeSpan.FromMilliseconds(100),
-                cancellation.Token);
+            var bytes = await PipeUtility.ReadBytesTimeoutAsync(outputPipe.Reader, 1 + 19 + 1 + 14, 
+                TimeSpan.FromMilliseconds(100), cancellation.Token);
             bytes[0].ShouldBe((byte)19);
             bytes[20].ShouldBe((byte)14);
             bytes.AsSpan(21).ToArray().ShouldBe(Encoding.UTF8.GetBytes("/proto/test/1\n"));
@@ -125,8 +125,8 @@ namespace Libp2p.Net.Protocol.Tests
             await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
             
             // Assert
-            var bytes = await ReadBytesTimeoutAsync(outputPipe.Reader, 1 + 19 + 1 + 14, TimeSpan.FromMilliseconds(100),
-                cancellation.Token);
+            var bytes = await PipeUtility.ReadBytesTimeoutAsync(outputPipe.Reader, 1 + 19 + 1 + 14, 
+                TimeSpan.FromMilliseconds(100), cancellation.Token);
             bytes[0].ShouldBe((byte)19);
             bytes[20].ShouldBe((byte)14);
             bytes.AsSpan(21).ToArray().ShouldBe(Encoding.UTF8.GetBytes("/proto/test/1\n"));
@@ -155,8 +155,8 @@ namespace Libp2p.Net.Protocol.Tests
             await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
             
             // Assert
-            var bytes = await ReadBytesTimeoutAsync(outputPipe.Reader, 1 + 19 + 1 + 3, TimeSpan.FromMilliseconds(100),
-                cancellation.Token);
+            var bytes = await PipeUtility.ReadBytesTimeoutAsync(outputPipe.Reader, 1 + 19 + 1 + 3, 
+                TimeSpan.FromMilliseconds(100), cancellation.Token);
             bytes[0].ShouldBe((byte)19);
             bytes[20].ShouldBe((byte)3);
             bytes.AsSpan(21).ToArray().ShouldBe(Encoding.UTF8.GetBytes("na\n"));
@@ -190,53 +190,13 @@ namespace Libp2p.Net.Protocol.Tests
             await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
             
             // Assert
-            var bytes = await ReadBytesTimeoutAsync(outputPipe.Reader, 1 + 19 + 1 + 13, TimeSpan.FromMilliseconds(100),
-                cancellation.Token);
+            var bytes = await PipeUtility.ReadBytesTimeoutAsync(outputPipe.Reader, 1 + 19 + 1 + 13, 
+                TimeSpan.FromMilliseconds(100), cancellation.Token);
             bytes[0].ShouldBe((byte)19);
             bytes[20].ShouldBe((byte)13);
             bytes.AsSpan(21).ToArray().ShouldBe(Encoding.UTF8.GetBytes("/proto/other\n"));
             testProtocol1.Connections.Count.ShouldBe(0);
             testProtocolOther.Connections.Count.ShouldBe(1);
-        }
-
-        private static async Task<byte[]> ReadBytesTimeoutAsync(PipeReader pipeReader, int count, TimeSpan timeout,
-            CancellationToken cancellationToken)
-        {
-            var bytes = new byte[0];
-            var position = default(SequencePosition);
-
-            try
-            {
-                var timeoutCts = new CancellationTokenSource(timeout);
-                var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-
-                while (true)
-                {
-                    var result = await pipeReader.ReadAsync(combinedCts.Token); 
-                    // This is in no way efficient, but rather than fail outright, we want to keep track of and
-                    // return the last thing we did receive for debugging purposes, e.g. maybe some of it matches.
-                    bytes = result.Buffer.ToArray();
-                    position = result.Buffer.End;
-
-                    if (result.Buffer.Length >= count)
-                    {
-                        break;
-                    }
-
-                    pipeReader.AdvanceTo(result.Buffer.Start, result.Buffer.End);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                Debug.WriteLine($"ReadBytesTimeoutAsync timed out with {bytes.Length}/{count} bytes.");
-            }
-
-            if (bytes.Length > 0)
-            {
-                pipeReader.AdvanceTo(position, position);
-            }
-
-            return bytes;
         }
     }
 }
