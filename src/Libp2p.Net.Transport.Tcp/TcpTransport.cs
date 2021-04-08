@@ -16,7 +16,8 @@ namespace Libp2p.Net.Transport.Tcp
             return connection;
         }
 
-        public Task<IConnectionListener> ListenAsync(MultiAddress address, CancellationToken cancellationToken = default)
+        public Task<IConnectionListener> ListenAsync(MultiAddress address,
+            CancellationToken cancellationToken = default)
         {
             var endpoint = address.ToIPEndPoint();
             var tcpListener = new TcpListener(endpoint);
