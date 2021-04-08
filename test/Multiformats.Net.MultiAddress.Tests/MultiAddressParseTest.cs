@@ -4,7 +4,7 @@ using Shouldly;
 namespace Multiformats.Net.Tests
 {
     [TestClass]
-    public class MultiAddress_Parse
+    public class MultiAddressParseTest
     {
         [TestMethod]
         public void ParseIp4()

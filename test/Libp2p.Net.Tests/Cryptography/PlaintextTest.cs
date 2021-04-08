@@ -16,7 +16,7 @@ namespace Libp2p.Net.Tests.Cryptography
 {
 /*
     [TestClass]
-    public class Plaintext_Basic
+    public class PlaintextTest
     {
         [TestMethod]
         public async Task DownstreamPipeHasPlaintextValue()

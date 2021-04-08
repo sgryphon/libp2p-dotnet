@@ -13,7 +13,7 @@ using Shouldly;
 namespace Libp2p.Net.Protocol.Tests
 {
     [TestClass]
-    public class MultistreamSelect1_Listener
+    public class MultistreamSelect1ListenerTest
     {
         private readonly List<IDisposable> _allListeners = new();
         

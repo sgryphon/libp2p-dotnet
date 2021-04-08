@@ -4,7 +4,7 @@ using Shouldly;
 namespace Multiformats.Net.Tests
 {
     [TestClass]
-    public class MultiAddressExtensions
+    public class MultiAddressExtensionsTest
     {
         [TestMethod]
         public void ToIPAddress()

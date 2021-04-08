@@ -6,4 +6,8 @@
         <RootNamespace>Libp2p.Net.Streams</RootNamespace>
     </PropertyGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Libp2p.Net.Abstractions\Libp2p.Net.Abstractions.csproj" />
+    </ItemGroup>
+
 </Project>
