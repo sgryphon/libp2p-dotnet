@@ -1,5 +1,4 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,17 +11,17 @@ namespace Libp2p.Net.Streams
             new DiagnosticListener("Libp2p.Net.Streams.Mplex67");
 
         public string Name { get; } = "Mplex 6.7.0";
-        
-        public Task<IMultiplexer> StartMultiplexerAsync(IConnection connection, CancellationToken cancellationToken = default)
+
+        public Task<IMultiplexer> StartMultiplexerAsync(IConnection connection,
+            CancellationToken cancellationToken = default)
         {
             var multiplexer = new MplexMultiplexer(connection);
             return Task.FromResult<IMultiplexer>(multiplexer);
         }
-        
+
         internal static class Diagnostics
         {
             public const string Exception = "Mplex67.Exception";
         }
-
     }
 }

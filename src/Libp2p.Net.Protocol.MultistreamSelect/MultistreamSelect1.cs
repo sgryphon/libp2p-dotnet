@@ -131,7 +131,7 @@ namespace Libp2p.Net.Protocol
                 // Respond with header
                 var headerFlush = await connection.Output.WriteAsync(s_identifierBytes, cancellationToken)
                     .ConfigureAwait(false);
-                
+
                 // Find length
                 int protocolLength;
                 while (true)

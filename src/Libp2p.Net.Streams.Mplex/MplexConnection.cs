@@ -1,9 +1,5 @@
-﻿using System;
-using System.Diagnostics;
-using System.IO.Pipelines;
-using System.Text.Unicode;
+﻿using System.IO.Pipelines;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Libp2p.Net.Streams
 {
@@ -15,23 +11,23 @@ namespace Libp2p.Net.Streams
         {
             StreamId = streamId;
         }
-        
-        public int StreamId { get; }
-        
-        public void Dispose()
-        {
-        }
 
         public PipeReader Input => UpstreamPipe.Reader;
 
         public PipeWriter Output => DownstreamPipe.Writer;
 
-        internal Pipe UpstreamPipe { get; } = new Pipe();
+        public int StreamId { get; }
 
         internal Pipe DownstreamPipe { get; } = new Pipe();
 
+        internal bool IsInitiator => true;
+
         internal CancellationToken StoppingToken => _stoppingCts.Token;
 
-        internal bool IsInitiator => true;
+        internal Pipe UpstreamPipe { get; } = new Pipe();
+
+        public void Dispose()
+        {
+        }
     }
 }

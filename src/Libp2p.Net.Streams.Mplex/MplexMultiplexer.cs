@@ -8,12 +8,13 @@ namespace Libp2p.Net.Streams
 {
     public class MplexMultiplexer : IMultiplexer
     {
-        private int _nextStreamId;
-        private readonly IConnection? _innerConnection;
-        private readonly IDictionary<int, MplexConnection> _connections = new Dictionary<int, MplexConnection>();
         private readonly IDictionary<int, Task> _connectionReaderTasks = new Dictionary<int, Task>();
+        private readonly IDictionary<int, MplexConnection> _connections = new Dictionary<int, MplexConnection>();
+        private readonly IConnection? _innerConnection;
 
-        private SemaphoreSlim _innerConnectionOutputWriteLock = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _innerConnectionOutputWriteLock = new SemaphoreSlim(1, 1);
+
+        private int _nextStreamId;
         //private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
         //private Task? _executingTask;
 
@@ -21,7 +22,7 @@ namespace Libp2p.Net.Streams
         {
             _innerConnection = innerConnection;
         }
-        
+
         public async Task<IConnection> ConnectAsync(CancellationToken cancellationToken = default)
         {
             var streamId = Interlocked.Increment(ref _nextStreamId);
@@ -29,64 +30,6 @@ namespace Libp2p.Net.Streams
             _connections[streamId] = connection;
             await StartConnectionAsync(connection, cancellationToken);
             return connection;
-        }
-
-        private async Task StartConnectionAsync(MplexConnection connection,
-            CancellationToken cancellationToken = default)
-        {
-            // TODO: Diagnostic activity to create/start connection & send header
-            // Send header
-            var newStreamHeader = connection.StreamId << 3;
-            var newStreamNameBytes = new byte[0];
-            await SemaphoreWriteDownstreamMessageAsync(newStreamHeader, newStreamNameBytes, cancellationToken);
-            
-            // Start upstream connection reader
-            var connectionReaderTask = ExecuteUpstreamConnectionReaderAsync(connection);
-            _connectionReaderTasks[connection.StreamId] = connectionReaderTask;
-        }
-
-        private async Task SemaphoreWriteDownstreamMessageAsync (int header, ReadOnlySequence<byte> buffer, CancellationToken cancellationToken = default)
-        {
-            // TODO: Message size limits for Mplex
-            await _innerConnectionOutputWriteLock.WaitAsync(cancellationToken);
-            try
-            {
-                var memory = _innerConnection!.Output.GetMemory((int)buffer.Length + 5 + 5);
-                VarIntUtility.WriteVarInt(memory.Span, header, out var headerBytesWritten);
-                VarIntUtility.WriteVarInt(memory.Span.Slice(headerBytesWritten), (int)buffer.Length,
-                    out var lengthBytesWritten);
-                var index = headerBytesWritten + lengthBytesWritten;
-                foreach (var segment in buffer)
-                {
-                    segment.CopyTo(memory.Slice(index));
-                    index += segment.Length;
-                }
-                _innerConnection.Output.Advance(index);
-                _ = await _innerConnection.Output.FlushAsync(cancellationToken).ConfigureAwait(false);
-            }
-            finally
-            {
-                _innerConnectionOutputWriteLock.Release();
-            }
-        }
-
-        private async Task SemaphoreWriteDownstreamMessageAsync(int header, ReadOnlyMemory<byte> segment, CancellationToken cancellationToken = default)
-        {
-            await _innerConnectionOutputWriteLock.WaitAsync(cancellationToken).ConfigureAwait(false);
-            try
-            {
-                var memory = _innerConnection!.Output.GetMemory(segment.Length + 5 + 5);
-                VarIntUtility.WriteVarInt(memory.Span, header, out var headerBytesWritten);
-                VarIntUtility.WriteVarInt(memory.Slice(headerBytesWritten).Span, segment.Length,
-                    out var lengthBytesWritten);
-                segment.CopyTo(memory.Slice(headerBytesWritten + lengthBytesWritten));
-                _innerConnection.Output.Advance(headerBytesWritten + lengthBytesWritten + segment.Length);
-                _ = await _innerConnection.Output.FlushAsync(cancellationToken).ConfigureAwait(false);
-            }
-            finally
-            {
-                _innerConnectionOutputWriteLock.Release();
-            }
         }
 
         private async Task ExecuteUpstreamConnectionReaderAsync(MplexConnection connection)
@@ -105,6 +48,7 @@ namespace Libp2p.Net.Streams
                         var header = (connection.StreamId << 3) | (connection.IsInitiator ? 0x1 : 0x2);
                         await SemaphoreWriteDownstreamMessageAsync(header, buffer, cancellationToken);
                     }
+
                     connection.Input.AdvanceTo(buffer.End, buffer.End);
                 }
             }
@@ -116,7 +60,68 @@ namespace Libp2p.Net.Streams
                 }
             }
         }
-        
+
+        private async Task SemaphoreWriteDownstreamMessageAsync(int header, ReadOnlySequence<byte> buffer,
+            CancellationToken cancellationToken = default)
+        {
+            // TODO: Message size limits for Mplex
+            await _innerConnectionOutputWriteLock.WaitAsync(cancellationToken);
+            try
+            {
+                var memory = _innerConnection!.Output.GetMemory((int)buffer.Length + 5 + 5);
+                VarIntUtility.WriteVarInt(memory.Span, header, out var headerBytesWritten);
+                VarIntUtility.WriteVarInt(memory.Span.Slice(headerBytesWritten), (int)buffer.Length,
+                    out var lengthBytesWritten);
+                var index = headerBytesWritten + lengthBytesWritten;
+                foreach (var segment in buffer)
+                {
+                    segment.CopyTo(memory.Slice(index));
+                    index += segment.Length;
+                }
+
+                _innerConnection.Output.Advance(index);
+                _ = await _innerConnection.Output.FlushAsync(cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                _innerConnectionOutputWriteLock.Release();
+            }
+        }
+
+        private async Task SemaphoreWriteDownstreamMessageAsync(int header, ReadOnlyMemory<byte> segment,
+            CancellationToken cancellationToken = default)
+        {
+            await _innerConnectionOutputWriteLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                var memory = _innerConnection!.Output.GetMemory(segment.Length + 5 + 5);
+                VarIntUtility.WriteVarInt(memory.Span, header, out var headerBytesWritten);
+                VarIntUtility.WriteVarInt(memory.Slice(headerBytesWritten).Span, segment.Length,
+                    out var lengthBytesWritten);
+                segment.CopyTo(memory.Slice(headerBytesWritten + lengthBytesWritten));
+                _innerConnection.Output.Advance(headerBytesWritten + lengthBytesWritten + segment.Length);
+                _ = await _innerConnection.Output.FlushAsync(cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                _innerConnectionOutputWriteLock.Release();
+            }
+        }
+
+        private async Task StartConnectionAsync(MplexConnection connection,
+            CancellationToken cancellationToken = default)
+        {
+            // TODO: Diagnostic activity to create/start connection & send header
+            // Send header
+            var newStreamHeader = connection.StreamId << 3;
+            var newStreamNameBytes = new byte[0];
+            await SemaphoreWriteDownstreamMessageAsync(newStreamHeader, newStreamNameBytes, cancellationToken);
+
+            // Start upstream connection reader
+            var connectionReaderTask = ExecuteUpstreamConnectionReaderAsync(connection);
+            _connectionReaderTasks[connection.StreamId] = connectionReaderTask;
+        }
+
         // TODO: Start listening
 
         /*
