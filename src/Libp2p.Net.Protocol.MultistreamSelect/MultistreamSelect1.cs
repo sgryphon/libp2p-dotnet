@@ -238,7 +238,7 @@ namespace Libp2p.Net.Protocol
                 {
                     if (b > 0x7)
                     {
-                        throw new OverflowException("Value to large for Int32");
+                        throw new OverflowException("Value too large for Int32");
                     }
                 }
 

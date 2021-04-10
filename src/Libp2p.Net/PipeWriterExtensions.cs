@@ -1,4 +1,6 @@
-﻿using System.IO.Pipelines;
+﻿using System;
+using System.IO.Pipelines;
+using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,21 +12,8 @@ namespace Libp2p.Net
         {
             // TODO: Check it handles negatives, etc
             var outputBuffer = pipeWriter.GetSpan(5);
-            var index = 0;
-            while (true)
-            {
-                if (value < 0x80)
-                {
-                    outputBuffer[index] = (byte)value;
-                    break;
-                }
-
-                outputBuffer[index] = (byte)((value & 0x7F) | 0x80);
-                value = value >> 7;
-                index++;
-            }
-
-            pipeWriter.Advance(index + 1);
+            VarIntUtility.TryWriteVarInt(outputBuffer, value, out var bytesWritten);
+            pipeWriter.Advance(bytesWritten);
             return pipeWriter.FlushAsync(cancellationToken);
         }
     }
