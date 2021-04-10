@@ -48,9 +48,11 @@ namespace Libp2p.Net.Streams
 
         private async Task ForwardBufferDownstreamAsync (MplexConnection connection, ReadOnlySequence<byte> buffer)
         {
-            var header = (connection.StreamId << 3) & (connection.IsInitiator ? 0x2 : 0x1);
+            var header = (connection.StreamId << 3) | (connection.IsInitiator ? 0x1 : 0x2);
             foreach (var segment in buffer)
             {
+                // TODO: Write all segments into one buffer
+                // TODO: Message size limits for Mplex
                 await SemaphoreWriteMessageAsync(header, segment);
             }
         }
