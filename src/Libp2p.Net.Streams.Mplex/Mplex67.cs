@@ -12,11 +12,12 @@ namespace Libp2p.Net.Streams
 
         public string Name { get; } = "Mplex 6.7.0";
 
-        public Task<IMultiplexer> StartMultiplexerAsync(IConnection connection,
+        public async Task<IMultiplexer> StartMultiplexerAsync(IConnection connection,
             CancellationToken cancellationToken = default)
         {
             var multiplexer = new MplexMultiplexer(connection);
-            return Task.FromResult<IMultiplexer>(multiplexer);
+            await multiplexer.StartAsync(cancellationToken);
+            return multiplexer;
         }
 
         internal static class Diagnostics
