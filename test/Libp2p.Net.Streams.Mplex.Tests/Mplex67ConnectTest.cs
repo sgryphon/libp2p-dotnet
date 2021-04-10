@@ -23,19 +23,18 @@ namespace Libp2p.Net.Streams.Tests
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
             var pipeConnection = new PipeConnection(inputPipe.Reader, outputPipe.Writer);
-            // TODO: Wire up Mplex to underlying connection
+            var multiplexConnection = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
 
             // Act
-            // TODO: Create new connection
-            // protocolMplex.ConnectAsync(...) / CreateConnectionAsync()
-            // TODO: Do we need to also send something in the connection?
+            var connection = await multiplexConnection.ConnectAsync(cancellation.Token);
             await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
 
             // Assert
-            var bytes = await PipeUtility.ReadBytesTimeoutAsync(outputPipe.Reader, 1 + 19,
+            var bytes = await PipeUtility.ReadBytesTimeoutAsync(outputPipe.Reader, 2,
                 TimeSpan.FromMilliseconds(100), cancellation.Token);
-            // TODO: Check correct packet header was sent
-            //bytes[0].ShouldBe((byte)19);
+            bytes[0].ShouldBe((byte)0x8); // stream ID 1
+            bytes[1].ShouldBe((byte)0x0); // stream name empty
+            ((MplexConnection)connection).StreamId.ShouldBe(1);
         }
     }
 }

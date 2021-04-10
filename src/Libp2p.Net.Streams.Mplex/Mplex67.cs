@@ -1,27 +1,28 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Libp2p.Net.Streams
 {
     // See: https://github.com/libp2p/specs/tree/master/mplex
-    public class Mplex67 : IProtocolMultiplex
+    public class Mplex67 : IMultiplexProtocol
     {
-        public string Name => "Mplex 6.7.0";
+        internal static readonly DiagnosticSource s_diagnosticSource =
+            new DiagnosticListener("Libp2p.Net.Streams.Mplex67");
+
+        public string Name { get; } = "Mplex 6.7.0";
         
-        public Task StartAsync(IConnection connection, CancellationToken cancellationToken = default)
+        public Task<IMultiplexer> StartMultiplexerAsync(IConnection connection, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            var multiplexer = new MplexMultiplexer(connection);
+            return Task.FromResult<IMultiplexer>(multiplexer);
+        }
+        
+        internal static class Diagnostics
+        {
+            public const string Exception = "Mplex67.Exception";
         }
 
-        public Task<IConnection> ConnectAsync(CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<IConnectionListener> ListenAsync(CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

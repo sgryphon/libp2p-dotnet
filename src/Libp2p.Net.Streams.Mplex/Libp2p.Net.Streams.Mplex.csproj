@@ -8,6 +8,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Libp2p.Net.Abstractions\Libp2p.Net.Abstractions.csproj" />
+      <ProjectReference Include="..\Libp2p.Net\Libp2p.Net.csproj" />
     </ItemGroup>
 
 </Project>
