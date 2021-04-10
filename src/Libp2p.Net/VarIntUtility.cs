@@ -7,13 +7,13 @@ namespace Libp2p.Net
     {
         public static void WriteVarInt(Span<byte> buffer, int value, out int bytesWritten)
         {
-            if (!TryWriteVarInt(buffer, value, out bytesWritten))
+            if (!TryWriteVarInt(buffer, (uint)value, out bytesWritten))
             {
                 throw new SerializationException("Failed to serialize varint");
             }
         }
-        
-        public static bool TryWriteVarInt(Span<byte> buffer, int value, out int bytesWritten)
+
+        public static bool TryWriteVarInt(Span<byte> buffer, ulong value, out int bytesWritten)
         {
             var index = 0;
             while (true)

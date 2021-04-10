@@ -12,7 +12,7 @@ namespace Libp2p.Net
         {
             // TODO: Check it handles negatives, etc
             var outputBuffer = pipeWriter.GetSpan(5);
-            VarIntUtility.TryWriteVarInt(outputBuffer, value, out var bytesWritten);
+            VarIntUtility.WriteVarInt(outputBuffer, value, out var bytesWritten);
             pipeWriter.Advance(bytesWritten);
             return pipeWriter.FlushAsync(cancellationToken);
         }
