@@ -15,36 +15,11 @@ namespace Libp2p.Net.Protocol.Tests
     [TestClass]
     public class MultistreamSelect1ListenerTest
     {
-        private readonly List<IDisposable> _allListeners = new();
-        
-        [TestInitialize]
-        public void Initialize()
-        {
-            _allListeners.Add(DiagnosticListener.AllListeners.Subscribe(listener =>
-            {
-                if (listener.Name.StartsWith("Libp2p."))
-                {
-                    _allListeners.Add(listener.Subscribe(kvp =>
-                    {
-                        Console.WriteLine("{0}: {1}", kvp.Key, kvp.Value);
-                    }));
-                }
-            }));
-        }
-
-        [TestCleanup]
-        public void Cleanup()
-        {
-            foreach (var listener in _allListeners)
-            {
-                listener.Dispose();
-            }
-            _allListeners.Clear();
-        }
-        
         [TestMethod]
         public async Task HandshakeReply()
         {
+            using var diagnostics = new TestDiagnosticCollector();
+            
             // Arrange
             using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
             var protocolSelect = new MultistreamSelect1();
@@ -64,11 +39,15 @@ namespace Libp2p.Net.Protocol.Tests
                 TimeSpan.FromMilliseconds(100), cancellation.Token);
             bytes[0].ShouldBe((byte)19);
             bytes.AsSpan(1).ToArray().ShouldBe(Encoding.UTF8.GetBytes("/multistream/1.0.0\n"));
+            
+            diagnostics.GetExceptions().ShouldBeEmpty();
         }
         
         [TestMethod]
         public async Task SelectSingleProtocol()
         {
+            using var diagnostics = new TestDiagnosticCollector();
+            
             // Arrange
             using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
             var testProtocol1 = new TestProtocol();
@@ -94,11 +73,15 @@ namespace Libp2p.Net.Protocol.Tests
             bytes[20].ShouldBe((byte)14);
             bytes.AsSpan(21).ToArray().ShouldBe(Encoding.UTF8.GetBytes("/proto/test/1\n"));
             testProtocol1.Connections.Count.ShouldBe(1);
+            
+            diagnostics.GetExceptions().ShouldBeEmpty();
         }
         
         [TestMethod]
         public async Task SelectSingleProtocolWithDelays()
         {
+            using var diagnostics = new TestDiagnosticCollector();
+            
             // Arrange
             using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
             var testProtocol1 = new TestProtocol();
@@ -131,11 +114,15 @@ namespace Libp2p.Net.Protocol.Tests
             bytes[20].ShouldBe((byte)14);
             bytes.AsSpan(21).ToArray().ShouldBe(Encoding.UTF8.GetBytes("/proto/test/1\n"));
             testProtocol1.Connections.Count.ShouldBe(1);
+            
+            diagnostics.GetExceptions().ShouldBeEmpty();
         }
         
         [TestMethod]
         public async Task RespondNa()
         {
+            using var diagnostics = new TestDiagnosticCollector();
+            
             // Arrange
             using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
             var testProtocol1 = new TestProtocol();
@@ -161,11 +148,15 @@ namespace Libp2p.Net.Protocol.Tests
             bytes[20].ShouldBe((byte)3);
             bytes.AsSpan(21).ToArray().ShouldBe(Encoding.UTF8.GetBytes("na\n"));
             testProtocol1.Connections.Count.ShouldBe(0);
+            
+            diagnostics.GetExceptions().ShouldBeEmpty();
         }
 
         [TestMethod]
         public async Task SelectProtocolFromList()
         {
+            using var diagnostics = new TestDiagnosticCollector();
+            
             // Arrange
             using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
             var testProtocol1 = new TestProtocol();
@@ -197,6 +188,8 @@ namespace Libp2p.Net.Protocol.Tests
             bytes.AsSpan(21).ToArray().ShouldBe(Encoding.UTF8.GetBytes("/proto/other\n"));
             testProtocol1.Connections.Count.ShouldBe(0);
             testProtocolOther.Connections.Count.ShouldBe(1);
+            
+            diagnostics.GetExceptions().ShouldBeEmpty();
         }
     }
 }

@@ -9,12 +9,12 @@ namespace Libp2p.Net.Transport
             Input = input;
             Output = output;
         }
-            
-        public void Dispose()
-        {
-        }
 
         public PipeReader Input { get; }
         public PipeWriter Output { get; }
+
+        public void Dispose()
+        {
+        }
     }
 }

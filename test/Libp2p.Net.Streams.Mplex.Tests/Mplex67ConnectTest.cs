@@ -17,6 +17,8 @@ namespace Libp2p.Net.Streams.Tests
         [TestMethod]
         public async Task InitialConnectSendsHeaderPacket()
         {
+            using var diagnostics = new TestDiagnosticCollector();
+            
             // Arrange
             using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
             var protocolMplex = new Mplex67();
@@ -36,11 +38,15 @@ namespace Libp2p.Net.Streams.Tests
             bytes[0].ShouldBe((byte)0x8); // stream ID 1 + NewStream (0)
             bytes[1].ShouldBe((byte)0x0); // stream name empty
             ((MplexConnection)connection).StreamId.ShouldBe(1);
+            
+            diagnostics.GetExceptions().ShouldBeEmpty();
         }
         
         [TestMethod]
         public async Task MessageSentWithHeader()
         {
+            using var diagnostics = new TestDiagnosticCollector();
+            
             // Arrange
             using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
             var protocolMplex = new Mplex67();
@@ -67,12 +73,16 @@ namespace Libp2p.Net.Streams.Tests
                 });
             bytes.ShouldBe(expected);
             ((MplexConnection)connection).StreamId.ShouldBe(1);
+            
+            diagnostics.GetExceptions().ShouldBeEmpty();
         }
 
         
         [TestMethod]
         public async Task MultiplexTwoConnections()
         {
+            using var diagnostics = new TestDiagnosticCollector();
+            
             // Arrange
             using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
             var protocolMplex = new Mplex67();
@@ -99,6 +109,8 @@ namespace Libp2p.Net.Streams.Tests
                 .Concat(new byte[] {0x11, 4, 0x91, 0x92, 0x93, 0x94});
             bytes.ShouldBe(expected);
             ((MplexConnection)connection2).StreamId.ShouldBe(2);
+            
+            diagnostics.GetExceptions().ShouldBeEmpty();
         }
     }
 }

@@ -4,10 +4,12 @@
         <TargetFramework>netcoreapp3.1</TargetFramework>
       <Nullable>enable</Nullable>
       <RootNamespace>LIbp2p.UnitTesting</RootNamespace>
+      <LangVersion>default</LangVersion>
     </PropertyGroup>
   
   <ItemGroup>
     <PackageReference Include="System.IO.Pipelines" Version="5.0.1" />
+    <PackageReference Include="System.Reactive" Version="5.0.0" />
   </ItemGroup>
   
   <ItemGroup>

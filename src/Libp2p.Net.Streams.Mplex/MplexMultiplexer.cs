@@ -13,10 +13,10 @@ namespace Libp2p.Net.Streams
         private readonly IConnection? _innerConnection;
 
         private readonly SemaphoreSlim _innerConnectionOutputWriteLock = new SemaphoreSlim(1, 1);
+        private Task? _innerConnectionReaderTask;
 
         private int _nextStreamId;
         private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
-        private Task? _innerConnectionReaderTask;
 
         public MplexMultiplexer(IConnection innerConnection)
         {
@@ -30,6 +30,53 @@ namespace Libp2p.Net.Streams
             _connections[streamId] = connection;
             await StartConnectionAsync(connection, cancellationToken);
             return connection;
+        }
+
+        private async Task ExecuteInnerConnectionReaderAsync()
+        {
+            try
+            {
+                var connectionReader = _innerConnection!.Input;
+                var cancellationToken = _stoppingCts.Token;
+                while (true)
+                {
+                    // TODO: Diagnostic activity for each buffer received
+                    var result = await connectionReader.ReadAsync(cancellationToken).ConfigureAwait(false);
+                    var buffer = result.Buffer;
+                    if (buffer.Length >= 2)
+                    {
+                        // TODO: Handle potentially multiple messages in a buffer
+                        // TODO: Process buffer efficiently (don't use ToArray!)
+                        // TODO: Use varint reader
+                        var bytes = buffer.ToArray();
+                        var header = bytes[0];
+                        // TODO: Check header message type
+                        var messageType = header & 0x7;
+                        if (messageType != 0x2)
+                        {
+                            throw new NotImplementedException($"Mplex message type {messageType} not implemented yet.");
+                        }
+                        var streamId = header >> 3;
+                        var connection = _connections[streamId];
+                        var length = bytes[1];
+                        var flush = await connection.UpstreamPipe.Writer.WriteAsync(bytes.AsMemory(2, length),
+                            cancellationToken);
+                        var position = buffer.GetPosition(2 + length);
+                        _innerConnection.Input.AdvanceTo(position, position);
+                    }
+                    else
+                    {
+                        _innerConnection.Input.AdvanceTo(buffer.End, buffer.End);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                if (Mplex67.s_diagnosticSource.IsEnabled(Mplex67.Diagnostics.Exception))
+                {
+                    Mplex67.s_diagnosticSource.Write(Mplex67.Diagnostics.Exception, ex);
+                }
+            }
         }
 
         private async Task ExecuteUpstreamConnectionReaderAsync(MplexConnection connection)
@@ -49,7 +96,7 @@ namespace Libp2p.Net.Streams
                         await SemaphoreWriteDownstreamMessageAsync(header, buffer, cancellationToken);
                     }
 
-                    connection.Input.AdvanceTo(buffer.End, buffer.End);
+                    connectionReader.AdvanceTo(buffer.End, buffer.End);
                 }
             }
             catch (Exception ex)
@@ -108,6 +155,20 @@ namespace Libp2p.Net.Streams
             }
         }
 
+        // TODO: Start listening
+
+        internal Task StartAsync(CancellationToken cancellationToken = default)
+        {
+            _innerConnectionReaderTask = ExecuteInnerConnectionReaderAsync();
+            if (_innerConnectionReaderTask.IsCompleted)
+            {
+                // Bubble any cancellation or failure
+                return _innerConnectionReaderTask;
+            }
+
+            return Task.CompletedTask;
+        }
+
         private async Task StartConnectionAsync(MplexConnection connection,
             CancellationToken cancellationToken = default)
         {
@@ -121,62 +182,5 @@ namespace Libp2p.Net.Streams
             var connectionReaderTask = ExecuteUpstreamConnectionReaderAsync(connection);
             _connectionReaderTasks[connection.StreamId] = connectionReaderTask;
         }
-
-        // TODO: Start listening
-
-        internal Task StartAsync( CancellationToken cancellationToken = default)
-        {
-            _innerConnectionReaderTask = ExecuteInnerConnectionReaderAsync();
-            if (_innerConnectionReaderTask.IsCompleted)
-            {
-                // Bubble any cancellation or failure
-                return _innerConnectionReaderTask;
-            }
-
-            return Task.CompletedTask;
-        }
-        
-        private async Task ExecuteInnerConnectionReaderAsync()
-        {
-            try
-            {
-                var connectionReader = _innerConnection!.Input;
-                var cancellationToken = _stoppingCts.Token;
-                while (true)
-                {
-                    // TODO: Diagnostic activity for each buffer received
-                    var result = await connectionReader.ReadAsync(cancellationToken).ConfigureAwait(false);
-                    var buffer = result.Buffer;
-                    if (buffer.Length >= 2)
-                    {
-                        // TODO: Handle potentially multiple messages in a buffer
-                        // TODO: Process buffer efficiently (don't use ToArray!)
-                        // TODO: Use varint reader
-                        var bytes = buffer.ToArray();
-                        var header = bytes[0];
-                        // TODO: Check header message type
-                        var streamId = header >> 3;
-                        var connection = _connections[streamId];
-                        var length = bytes[1];
-                        var flush = await connection.UpstreamPipe.Writer.WriteAsync(bytes.AsMemory(2, length),
-                            cancellationToken);
-                        var position = buffer.GetPosition(2 + length);
-                        _innerConnection.Input.AdvanceTo(position, position);
-                    }
-                    else
-                    {
-                        _innerConnection.Input.AdvanceTo(buffer.End, buffer.End);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                if (Mplex67.s_diagnosticSource.IsEnabled(Mplex67.Diagnostics.Exception))
-                {
-                    Mplex67.s_diagnosticSource.Write(Mplex67.Diagnostics.Exception, ex);
-                }
-            }
-        }
-        
     }
 }
