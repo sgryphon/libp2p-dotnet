@@ -23,6 +23,7 @@ namespace Libp2p.Net.Streams
         internal static class Diagnostics
         {
             public const string Exception = "Mplex67.Exception";
+            public const string UnknownStream = "Mplex67.UnknownStream";
         }
     }
 }

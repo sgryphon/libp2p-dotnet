@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -43,16 +44,8 @@ namespace Libp2p.Net.Streams
                     // TODO: Diagnostic activity for each buffer received
                     var result = await connectionReader.ReadAsync(cancellationToken).ConfigureAwait(false);
                     var buffer = result.Buffer;
-                    if (buffer.Length >= 2)
-                    {
-                        // TODO: Handle potentially multiple messages in a buffer
-                        var position = await ProcessMessage(buffer, cancellationToken);
-                        _innerConnection.Input.AdvanceTo(position, position);
-                    }
-                    else
-                    {
-                        _innerConnection.Input.AdvanceTo(buffer.End, buffer.End);
-                    }
+                    var consumed = await ProcessMessages(buffer, cancellationToken).ConfigureAwait(false);
+                    _innerConnection.Input.AdvanceTo(buffer.GetPosition(consumed), buffer.End);
                 }
             }
             catch (Exception ex)
@@ -64,46 +57,89 @@ namespace Libp2p.Net.Streams
             }
         }
 
-        private async Task<SequencePosition> ProcessMessage(ReadOnlySequence<byte> buffer, CancellationToken cancellationToken)
+        private async Task<long> ProcessMessages(ReadOnlySequence<byte> buffer, CancellationToken cancellationToken)
         {
-            // TODO: Process buffer efficiently (don't use ToArray!)
-            // TODO: Use varint reader
-            var bytes = buffer.ToArray();
-            var header = bytes[0];
-            // TODO: Check header message type
+            var consumed = 0L;
+            while (true)
+            {
+                if (!buffer.TryReadVarInt(out var headerConsumed, out var header))
+                {
+                    break;
+                }
+
+                if (!buffer.Slice(headerConsumed).TryReadVarInt(out var lengthConsumed, out var length))
+                {
+                    break;
+                }
+
+                var totalLength = headerConsumed + lengthConsumed + length;
+                if (buffer.Length < totalLength)
+                {
+                    break;
+                }
+
+                await ProcessMessage(header, buffer.Slice(headerConsumed + lengthConsumed, length), cancellationToken)
+                    .ConfigureAwait(false);
+                
+                buffer = buffer.Slice(totalLength);
+                consumed += totalLength;
+            }
+
+            return consumed;
+        }
+
+        private async Task ProcessMessage(int header, ReadOnlySequence<byte> buffer, CancellationToken cancellationToken)
+        {
             var messageFlag = (MessageFlag)(header & 0x7);
             var streamId = header >> 3;
-            var bytesRead = 1;
             switch (messageFlag)
             {
                 case MessageFlag.NewStream:
-                    var newConnection = new MplexConnection(false, streamId);
-                    await StartConnectionAsync(newConnection, cancellationToken);
-                    await _connectionsReceived.Writer.WriteAsync(newConnection, cancellationToken);
-                    // TODO: Actually check the length
-                    bytesRead += 1;
+                    await ReceiveNewStreamAsync(streamId, cancellationToken).ConfigureAwait(false);
                     break;
                 case MessageFlag.MessageReceiver:
                 case MessageFlag.MessageInitiator:
-                    var messageConnection = _connections[(messageFlag == MessageFlag.MessageInitiator, streamId)];
-                    bytesRead += await WriteUpstreamMessage(buffer, bytes, messageConnection, cancellationToken);
+                    await WriteUpstreamMessageAsync(messageFlag, streamId, buffer, cancellationToken).ConfigureAwait(false);
                     break;
                 default:
                     throw new NotImplementedException($"Mplex message type {messageFlag} not implemented yet.");
             }
-
-            var position = buffer.GetPosition(bytesRead);
-            return position;
         }
 
-        private static async Task<int> WriteUpstreamMessage(ReadOnlySequence<byte> buffer,
-            byte[] bytes, MplexConnection connection, CancellationToken cancellationToken)
+        private async Task ReceiveNewStreamAsync(int streamId, CancellationToken cancellationToken)
         {
-            // TODO: read varint
-            var length = bytes[1];
-            var flush = await connection.UpstreamPipe.Writer.WriteAsync(bytes.AsMemory(2, length),
-                cancellationToken);
-            return length + 1;
+            var newConnection = new MplexConnection(false, streamId);
+            await StartConnectionAsync(newConnection, cancellationToken);
+            await _connectionsReceived.Writer.WriteAsync(newConnection, cancellationToken);
+        }
+
+        private ValueTask<FlushResult> WriteUpstreamMessageAsync(MessageFlag messageFlag, int streamId,
+            ReadOnlySequence<byte> buffer, CancellationToken cancellationToken)
+        {
+            var key = (messageFlag == MessageFlag.MessageInitiator, streamId);
+            if (!_connections.TryGetValue(key, out var connection))
+            {
+                if (Mplex67.s_diagnosticSource.IsEnabled(Mplex67.Diagnostics.UnknownStream))
+                {
+                    Mplex67.s_diagnosticSource.Write(Mplex67.Diagnostics.UnknownStream, new {
+                        Key = key
+                    });
+                }
+
+                return new ValueTask<FlushResult>(new FlushResult());
+            }
+            
+            var upstreamBuffer = connection.UpstreamPipe.Writer.GetSpan((int)buffer.Length);
+
+            var index = 0;
+            foreach (var segment in buffer)
+            {
+                segment.Span.CopyTo(upstreamBuffer[index..]);
+                index += segment.Length;
+            }
+
+            connection.UpstreamPipe.Writer.Advance(index);
+            return connection.UpstreamPipe.Writer.FlushAsync(cancellationToken);
         }
 
         private async Task ExecuteUpstreamConnectionReaderAsync(MplexConnection connection)
