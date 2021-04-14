@@ -28,7 +28,6 @@ namespace Libp2p.Net.Streams
         {
             var streamId = Interlocked.Increment(ref _nextStreamId);
             var connection = new MplexConnection(true, streamId);
-            _connections[(true, streamId)] = connection;
             await StartConnectionAsync(connection, cancellationToken);
             return connection;
         }
@@ -201,6 +200,8 @@ namespace Libp2p.Net.Streams
             CancellationToken cancellationToken = default)
         {
             // TODO: Diagnostic activity to create/start connection & send header
+            _connections[(connection.IsInitiator, connection.StreamId)] = connection;
+            
             if (connection.IsInitiator)
             {
                 // Send header

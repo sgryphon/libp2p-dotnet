@@ -41,10 +41,105 @@ namespace Libp2p.Net.Streams.Tests
 
             // Assert
             ((MplexConnection)connection).StreamId.ShouldBe(1);
+            
+            diagnostics.GetExceptions().ShouldBeEmpty();
+        }
+        
+        [TestMethod]
+        public async Task IncomingStreamAcceptAndReadMessage()
+        {
+            using var diagnostics = new TestDiagnosticCollector();
+            
+            // Arrange
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+            var protocolMplex = new Mplex67();
+            
+            var inputPipe = new Pipe();
+            var outputPipe = new Pipe();
+            var pipeConnection = new PipeConnection(inputPipe.Reader, outputPipe.Writer);
+            var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
+
+            var input = new byte[]
+            {
+                0x08, // stream ID 1 + NewStream (0) 
+                0 // length
+            }.Concat(new byte[]
+            {
+                0x09, // stream ID 1 + MessageInitiator (1) 
+                3, // length
+                0x81, 0x82, 0x83
+            }).ToArray();
+            var inputFlush = inputPipe.Writer.WriteAsync(input, cancellation.Token);
+
+            // Act
+            var connection = await multiplexer.AcceptConnectionAsync(cancellation.Token);
+            await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
+
+            // Assert
+            var bytes = await PipeUtility.ReadBytesTimeoutAsync(connection.Input, 3,
+                TimeSpan.FromMilliseconds(100), cancellation.Token);
+            var expected = new byte[] {0x81, 0x82, 0x83};
+            bytes.ShouldBe(expected);
             ((MplexConnection)connection).StreamId.ShouldBe(1);
             
             diagnostics.GetExceptions().ShouldBeEmpty();
         }
         
+        
+        [TestMethod]
+        public async Task IncomingStreamAcceptMultiplex()
+        {
+            using var diagnostics = new TestDiagnosticCollector();
+            
+            // Arrange
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+            var protocolMplex = new Mplex67();
+            
+            var inputPipe = new Pipe();
+            var outputPipe = new Pipe();
+            var pipeConnection = new PipeConnection(inputPipe.Reader, outputPipe.Writer);
+            var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
+
+            var input = new byte[]
+            {
+                0x08, // stream ID 1 + NewStream (0) 
+                0 // length
+            }.Concat(new byte[]
+            {
+                0x10, // stream ID 2 + NewStream (0) 
+                0 // length
+            }).Concat(new byte[]
+            {
+                0x11, // stream ID 2 + MessageInitiator (1) 
+                4, // length
+                0x91, 0x92, 0x93, 0x94
+            }).Concat(new byte[]
+            {
+                0x09, // stream ID 1 + MessageInitiator (1) 
+                3, // length
+                0x81, 0x82, 0x83
+            }).ToArray();
+            var inputFlush = inputPipe.Writer.WriteAsync(input, cancellation.Token);
+
+            // Act
+            var connection = await multiplexer.AcceptConnectionAsync(cancellation.Token);
+            var connection2 = await multiplexer.AcceptConnectionAsync(cancellation.Token);
+            await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
+
+            // Assert
+            var bytes = await PipeUtility.ReadBytesTimeoutAsync(connection.Input, 3,
+                TimeSpan.FromMilliseconds(100), cancellation.Token);
+            var expected = new byte[] {0x81, 0x82, 0x83};
+            bytes.ShouldBe(expected);
+            ((MplexConnection)connection).StreamId.ShouldBe(1);
+
+            var bytes2 = await PipeUtility.ReadBytesTimeoutAsync(connection2.Input, 4,
+                TimeSpan.FromMilliseconds(100), cancellation.Token);
+            var expected2 = new byte[] {0x91, 0x92, 0x93, 0x94};
+            bytes2.ShouldBe(expected2);
+            ((MplexConnection)connection2).StreamId.ShouldBe(2);
+
+            diagnostics.GetExceptions().ShouldBeEmpty();
+        }
     }
 }
