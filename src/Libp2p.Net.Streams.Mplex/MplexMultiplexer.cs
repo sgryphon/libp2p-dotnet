@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Channels;
@@ -41,11 +43,32 @@ namespace Libp2p.Net.Streams
                 var cancellationToken = _stoppingCts.Token;
                 while (true)
                 {
-                    // TODO: Diagnostic activity for each buffer received
                     var result = await connectionReader.ReadAsync(cancellationToken).ConfigureAwait(false);
-                    var buffer = result.Buffer;
-                    var consumed = await ProcessMessages(buffer, cancellationToken).ConfigureAwait(false);
-                    _innerConnection.Input.AdvanceTo(buffer.GetPosition(consumed), buffer.End);
+                    var activity = default(Activity);
+                    try
+                    {
+                        if (Mplex67.s_diagnosticSource.IsEnabled(Mplex67.Diagnostics.InnerRead))
+                        {
+                            activity = new Activity(Mplex67.Diagnostics.InnerRead);
+                            activity = Mplex67.s_diagnosticSource.StartActivity(activity, activity);
+                        }
+
+                        var buffer = result.Buffer;
+                        var consumed = await ProcessInnerReaderMessages(buffer, cancellationToken)
+                            .ConfigureAwait(false);
+                        _innerConnection.Input.AdvanceTo(buffer.GetPosition(consumed), buffer.End);
+                        if (Mplex67.s_diagnosticSource.IsEnabled(Mplex67.Diagnostics.BytesRead))
+                        {
+                            Mplex67.s_diagnosticSource.Write(Mplex67.Diagnostics.BytesRead, new { BytesRead = consumed });
+                        }
+                    }
+                    finally
+                    {
+                        if (activity != null)
+                        {
+                            Mplex67.s_diagnosticSource.StopActivity(activity, activity);
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -57,11 +80,12 @@ namespace Libp2p.Net.Streams
             }
         }
 
-        private async Task<long> ProcessMessages(ReadOnlySequence<byte> buffer, CancellationToken cancellationToken)
+        private async Task<long> ProcessInnerReaderMessages(ReadOnlySequence<byte> buffer, CancellationToken cancellationToken)
         {
             var consumed = 0L;
             while (true)
             {
+                // NOTE: Header should be a base128 varint (we are only using effective base31)
                 if (!buffer.TryReadVarInt(out var headerConsumed, out var header))
                 {
                     break;
@@ -72,6 +96,8 @@ namespace Libp2p.Net.Streams
                     break;
                 }
 
+                // TODO: Check length > 1 MiB (protocol violation)
+                
                 var totalLength = headerConsumed + lengthConsumed + length;
                 if (buffer.Length < totalLength)
                 {
@@ -90,19 +116,39 @@ namespace Libp2p.Net.Streams
 
         private async Task ProcessMessage(int header, ReadOnlySequence<byte> buffer, CancellationToken cancellationToken)
         {
-            var messageFlag = (MessageFlag)(header & 0x7);
-            var streamId = header >> 3;
-            switch (messageFlag)
+            var activity = default(Activity);
+            try
             {
-                case MessageFlag.NewStream:
-                    await ReceiveNewStreamAsync(streamId, cancellationToken).ConfigureAwait(false);
-                    break;
-                case MessageFlag.MessageReceiver:
-                case MessageFlag.MessageInitiator:
-                    await WriteUpstreamMessageAsync(messageFlag, streamId, buffer, cancellationToken).ConfigureAwait(false);
-                    break;
-                default:
-                    throw new NotImplementedException($"Mplex message type {messageFlag} not implemented yet.");
+                var messageFlag = (MessageFlag)(header & 0x7);
+                var streamId = header >> 3;
+                if (Mplex67.s_diagnosticSource.IsEnabled(Mplex67.Diagnostics.ProcessMessage))
+                {
+                    activity = new Activity(Mplex67.Diagnostics.ProcessMessage);
+                    activity.AddTag("Flag", messageFlag.ToString());
+                    activity.AddTag("StreamId", streamId.ToString(CultureInfo.InvariantCulture));
+                    activity = Mplex67.s_diagnosticSource.StartActivity(activity, activity);
+                }
+
+                switch (messageFlag)
+                {
+                    case MessageFlag.NewStream:
+                        await ReceiveNewStreamAsync(streamId, cancellationToken).ConfigureAwait(false);
+                        break;
+                    case MessageFlag.MessageReceiver:
+                    case MessageFlag.MessageInitiator:
+                        await WriteUpstreamMessageAsync(messageFlag, streamId, buffer, cancellationToken)
+                            .ConfigureAwait(false);
+                        break;
+                    default:
+                        throw new NotImplementedException($"Mplex message type {messageFlag} not implemented yet.");
+                }
+            }
+            finally
+            {
+                if (activity != null)
+                {
+                    Mplex67.s_diagnosticSource.StopActivity(activity, activity);
+                }
             }
         }
 
@@ -150,16 +196,44 @@ namespace Libp2p.Net.Streams
                 var cancellationToken = connection.StoppingToken;
                 while (true)
                 {
-                    // TODO: Diagnostic activity for each buffer received
                     var result = await connectionReader.ReadAsync(cancellationToken).ConfigureAwait(false);
-                    var buffer = result.Buffer;
-                    if (buffer.Length > 0)
+                    var activity = default(Activity);
+                    try
                     {
-                        var header = (connection.StreamId << 3) | (connection.IsInitiator ? 0x1 : 0x2);
-                        await SemaphoreWriteDownstreamMessageAsync(header, buffer, cancellationToken);
-                    }
+                        if (Mplex67.s_diagnosticSource.IsEnabled(Mplex67.Diagnostics.ConnectionRead))
+                        {
+                            activity = new Activity(Mplex67.Diagnostics.ConnectionRead);
+                            activity.AddTag("Initiator", connection.IsInitiator.ToString());
+                            activity.AddTag("StreamId", connection.StreamId.ToString(CultureInfo.InvariantCulture));
+                            activity.Start();
+                            activity = Mplex67.s_diagnosticSource.StartActivity(activity, activity);
+                        }
 
-                    connectionReader.AdvanceTo(buffer.End, buffer.End);
+                        var buffer = result.Buffer;
+                        if (buffer.Length > 0)
+                        {
+                            var header = (connection.StreamId << 3) | (connection.IsInitiator ? 0x1 : 0x2);
+                            var chunkSize = Mplex67.MaximumMessageSizeBytes - 10;
+                            while (buffer.Length > chunkSize)
+                            {
+                                await SemaphoreWriteDownstreamMessageAsync(header, buffer.Slice(0, chunkSize),
+                                    cancellationToken).ConfigureAwait(false);
+                                buffer = buffer.Slice(chunkSize);
+                            }
+
+                            await SemaphoreWriteDownstreamMessageAsync(header, buffer, cancellationToken)
+                                .ConfigureAwait(false);
+                        }
+
+                        connectionReader.AdvanceTo(buffer.End, buffer.End);
+                    }
+                    finally
+                    {
+                        if (activity != null)
+                        {
+                            Mplex67.s_diagnosticSource.StopActivity(activity, activity);
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -174,7 +248,12 @@ namespace Libp2p.Net.Streams
         private async Task SemaphoreWriteDownstreamMessageAsync(int header, ReadOnlySequence<byte> buffer,
             CancellationToken cancellationToken = default)
         {
-            // TODO: Message size limits for Mplex
+            if (buffer.Length > Mplex67.MaximumMessageSizeBytes)
+            {
+                throw new ArgumentOutOfRangeException(nameof(buffer), "Message size exceeds 1 MiB limit");
+            }
+            
+            int bytesWritten;
             await _innerConnectionOutputWriteLock.WaitAsync(cancellationToken);
             try
             {
@@ -189,18 +268,29 @@ namespace Libp2p.Net.Streams
                     index += segment.Length;
                 }
 
-                _innerConnection.Output.Advance(index);
+                bytesWritten = index;
+                _innerConnection.Output.Advance(bytesWritten);
                 _ = await _innerConnection.Output.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
             finally
             {
                 _innerConnectionOutputWriteLock.Release();
             }
+            if (Mplex67.s_diagnosticSource.IsEnabled(Mplex67.Diagnostics.BytesWritten))
+            {
+                Mplex67.s_diagnosticSource.Write(Mplex67.Diagnostics.BytesWritten, new { BytesWritten = bytesWritten });
+            }
         }
 
         private async Task SemaphoreWriteDownstreamMessageAsync(int header, ReadOnlyMemory<byte> segment,
             CancellationToken cancellationToken = default)
         {
+            if (segment.Length > Mplex67.MaximumMessageSizeBytes)
+            {
+                throw new ArgumentOutOfRangeException(nameof(segment), "Message size exceeds 1 MiB limit");
+            }
+            
+            int bytesWritten;
             await _innerConnectionOutputWriteLock.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
@@ -209,16 +299,19 @@ namespace Libp2p.Net.Streams
                 VarIntUtility.WriteVarInt(memory.Slice(headerBytesWritten).Span, segment.Length,
                     out var lengthBytesWritten);
                 segment.CopyTo(memory.Slice(headerBytesWritten + lengthBytesWritten));
-                _innerConnection.Output.Advance(headerBytesWritten + lengthBytesWritten + segment.Length);
+                bytesWritten = headerBytesWritten + lengthBytesWritten + segment.Length;
+                _innerConnection.Output.Advance(bytesWritten);
                 _ = await _innerConnection.Output.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
             finally
             {
                 _innerConnectionOutputWriteLock.Release();
             }
+            if (Mplex67.s_diagnosticSource.IsEnabled(Mplex67.Diagnostics.BytesWritten))
+            {
+                Mplex67.s_diagnosticSource.Write(Mplex67.Diagnostics.BytesWritten, new { BytesWritten = bytesWritten });
+            }
         }
-
-        // TODO: Start listening
 
         internal Task StartAsync(CancellationToken cancellationToken = default)
         {

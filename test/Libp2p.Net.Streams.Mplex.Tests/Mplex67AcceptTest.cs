@@ -63,16 +63,18 @@ namespace Libp2p.Net.Streams.Tests
             {
                 0x08, // stream ID 1 + NewStream (0) 
                 0 // length
-            }.Concat(new byte[]
+            };
+            var input2 = new byte[]
             {
                 0x09, // stream ID 1 + MessageInitiator (1) 
                 3, // length
                 0x81, 0x82, 0x83
-            }).ToArray();
+            };
             var inputFlush = inputPipe.Writer.WriteAsync(input, cancellation.Token);
+            var connection = await multiplexer.AcceptConnectionAsync(cancellation.Token);
 
             // Act
-            var connection = await multiplexer.AcceptConnectionAsync(cancellation.Token);
+            var inputFlush2 = inputPipe.Writer.WriteAsync(input2, cancellation.Token);
             await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
 
             // Assert

@@ -10,6 +10,8 @@ namespace Libp2p.Net.Streams
         internal static readonly DiagnosticSource s_diagnosticSource =
             new DiagnosticListener("Libp2p.Net.Streams.Mplex67");
 
+        internal static long MaximumMessageSizeBytes = 1_048_576; // 1 MiB
+        
         public string Name { get; } = "Mplex 6.7.0";
 
         public async Task<IMultiplexer> StartMultiplexerAsync(IConnection connection,
@@ -22,7 +24,12 @@ namespace Libp2p.Net.Streams
 
         internal static class Diagnostics
         {
+            public const string BytesRead = "Mplex67.BytesRead";
+            public const string BytesWritten = "Mplex67.BytesWritten";
             public const string Exception = "Mplex67.Exception";
+            public const string ConnectionRead = "Mplex67.ConnectionRead";
+            public const string ProcessMessage = "Mplex67.ProcessMessage";
+            public const string InnerRead = "Mplex67.InnerRead";
             public const string UnknownStream = "Mplex67.UnknownStream";
         }
     }
