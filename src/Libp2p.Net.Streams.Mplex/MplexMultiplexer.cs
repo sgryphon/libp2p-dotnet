@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace Libp2p.Net.Streams
@@ -16,6 +17,7 @@ namespace Libp2p.Net.Streams
         private Task? _innerConnectionReaderTask;
         private int _nextStreamId;
         private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
+        private Channel<MplexConnection> _connectionsReceived = Channel.CreateUnbounded<MplexConnection>();
 
         public MplexMultiplexer(IConnection innerConnection)
         {
@@ -78,6 +80,7 @@ namespace Libp2p.Net.Streams
                 case MessageFlag.NewStream:
                     var newConnection = new MplexConnection(false, streamId);
                     await StartConnectionAsync(newConnection, cancellationToken);
+                    await _connectionsReceived.Writer.WriteAsync(newConnection, cancellationToken);
                     // TODO: Actually check the length
                     bytesRead += 1;
                     break;
@@ -215,9 +218,10 @@ namespace Libp2p.Net.Streams
         {
         }
 
-        public Task<IConnection> AcceptConnectionAsync(CancellationToken cancellationToken = default)
+        public async Task<IConnection> AcceptConnectionAsync(CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            var newConnection = await _connectionsReceived.Reader.ReadAsync(cancellationToken);
+            return newConnection;
         }
     }
 }
