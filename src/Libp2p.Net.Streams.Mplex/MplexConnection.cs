@@ -5,22 +5,21 @@ namespace Libp2p.Net.Streams
 {
     public class MplexConnection : IConnection
     {
+        public bool IsInitiator { get; }
+        public int StreamId { get; }
         private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
 
-        public MplexConnection(int streamId)
+        public MplexConnection(bool isInitiator, int streamId)
         {
+            IsInitiator = isInitiator;
             StreamId = streamId;
         }
 
         public PipeReader Input => UpstreamPipe.Reader;
 
         public PipeWriter Output => DownstreamPipe.Writer;
-
-        public int StreamId { get; }
-
+        
         internal Pipe DownstreamPipe { get; } = new Pipe();
-
-        internal bool IsInitiator => true;
 
         internal CancellationToken StoppingToken => _stoppingCts.Token;
 

@@ -8,13 +8,12 @@ namespace Libp2p.Net.Streams
 {
     public class MplexMultiplexer : IMultiplexer
     {
-        private readonly IDictionary<int, Task> _connectionReaderTasks = new Dictionary<int, Task>();
-        private readonly IDictionary<int, MplexConnection> _connections = new Dictionary<int, MplexConnection>();
+        private readonly IDictionary<(bool, int), Task> _connectionReaderTasks = new Dictionary<(bool, int), Task>();
+        private readonly IDictionary<(bool, int), MplexConnection> _connections =
+            new Dictionary<(bool, int), MplexConnection>();
         private readonly IConnection? _innerConnection;
-
         private readonly SemaphoreSlim _innerConnectionOutputWriteLock = new SemaphoreSlim(1, 1);
         private Task? _innerConnectionReaderTask;
-
         private int _nextStreamId;
         private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
 
@@ -26,8 +25,8 @@ namespace Libp2p.Net.Streams
         public async Task<IConnection> ConnectAsync(CancellationToken cancellationToken = default)
         {
             var streamId = Interlocked.Increment(ref _nextStreamId);
-            var connection = new MplexConnection(streamId);
-            _connections[streamId] = connection;
+            var connection = new MplexConnection(true, streamId);
+            _connections[(true, streamId)] = connection;
             await StartConnectionAsync(connection, cancellationToken);
             return connection;
         }
@@ -46,22 +45,7 @@ namespace Libp2p.Net.Streams
                     if (buffer.Length >= 2)
                     {
                         // TODO: Handle potentially multiple messages in a buffer
-                        // TODO: Process buffer efficiently (don't use ToArray!)
-                        // TODO: Use varint reader
-                        var bytes = buffer.ToArray();
-                        var header = bytes[0];
-                        // TODO: Check header message type
-                        var messageType = header & 0x7;
-                        if (messageType != 0x2)
-                        {
-                            throw new NotImplementedException($"Mplex message type {messageType} not implemented yet.");
-                        }
-                        var streamId = header >> 3;
-                        var connection = _connections[streamId];
-                        var length = bytes[1];
-                        var flush = await connection.UpstreamPipe.Writer.WriteAsync(bytes.AsMemory(2, length),
-                            cancellationToken);
-                        var position = buffer.GetPosition(2 + length);
+                        var position = await ProcessMessage(buffer, cancellationToken);
                         _innerConnection.Input.AdvanceTo(position, position);
                     }
                     else
@@ -77,6 +61,47 @@ namespace Libp2p.Net.Streams
                     Mplex67.s_diagnosticSource.Write(Mplex67.Diagnostics.Exception, ex);
                 }
             }
+        }
+
+        private async Task<SequencePosition> ProcessMessage(ReadOnlySequence<byte> buffer, CancellationToken cancellationToken)
+        {
+            // TODO: Process buffer efficiently (don't use ToArray!)
+            // TODO: Use varint reader
+            var bytes = buffer.ToArray();
+            var header = bytes[0];
+            // TODO: Check header message type
+            var messageFlag = (MessageFlag)(header & 0x7);
+            var streamId = header >> 3;
+            var bytesRead = 1;
+            switch (messageFlag)
+            {
+                case MessageFlag.NewStream:
+                    var newConnection = new MplexConnection(false, streamId);
+                    await StartConnectionAsync(newConnection, cancellationToken);
+                    // TODO: Actually check the length
+                    bytesRead += 1;
+                    break;
+                case MessageFlag.MessageReceiver:
+                case MessageFlag.MessageInitiator:
+                    var messageConnection = _connections[(messageFlag == MessageFlag.MessageInitiator, streamId)];
+                    bytesRead += await WriteUpstreamMessage(buffer, bytes, messageConnection, cancellationToken);
+                    break;
+                default:
+                    throw new NotImplementedException($"Mplex message type {messageFlag} not implemented yet.");
+            }
+
+            var position = buffer.GetPosition(bytesRead);
+            return position;
+        }
+
+        private static async Task<int> WriteUpstreamMessage(ReadOnlySequence<byte> buffer,
+            byte[] bytes, MplexConnection connection, CancellationToken cancellationToken)
+        {
+            // TODO: read varint
+            var length = bytes[1];
+            var flush = await connection.UpstreamPipe.Writer.WriteAsync(bytes.AsMemory(2, length),
+                cancellationToken);
+            return length + 1;
         }
 
         private async Task ExecuteUpstreamConnectionReaderAsync(MplexConnection connection)
@@ -173,14 +198,26 @@ namespace Libp2p.Net.Streams
             CancellationToken cancellationToken = default)
         {
             // TODO: Diagnostic activity to create/start connection & send header
-            // Send header
-            var newStreamHeader = connection.StreamId << 3;
-            var newStreamNameBytes = new byte[0];
-            await SemaphoreWriteDownstreamMessageAsync(newStreamHeader, newStreamNameBytes, cancellationToken);
+            if (connection.IsInitiator)
+            {
+                // Send header
+                var newStreamHeader = connection.StreamId << 3;
+                var newStreamNameBytes = new byte[0];
+                await SemaphoreWriteDownstreamMessageAsync(newStreamHeader, newStreamNameBytes, cancellationToken);
+            }
 
             // Start upstream connection reader
             var connectionReaderTask = ExecuteUpstreamConnectionReaderAsync(connection);
-            _connectionReaderTasks[connection.StreamId] = connectionReaderTask;
+            _connectionReaderTasks[(connection.IsInitiator, connection.StreamId)] = connectionReaderTask;
+        }
+
+        public void Dispose()
+        {
+        }
+
+        public Task<IConnection> AcceptConnectionAsync(CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
         }
     }
 }
