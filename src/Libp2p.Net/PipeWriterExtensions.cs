@@ -3,6 +3,7 @@ using System.IO.Pipelines;
 using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using Multiformats.Net;
 
 namespace Libp2p.Net
 {

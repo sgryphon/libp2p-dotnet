@@ -1,18 +1,22 @@
 ﻿using System.IO.Pipelines;
 using System.Threading;
+using Multiformats.Net;
 
 namespace Libp2p.Net.Streams
 {
     public class MplexConnection : IConnection
     {
+        public string Id { get; }
         public bool IsInitiator { get; }
         public int StreamId { get; }
         private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
 
-        public MplexConnection(bool isInitiator, int streamId)
+        internal MplexConnection(MultiAddress address, bool isInitiator, int streamId)
         {
+            RemoteAddress = address;
             IsInitiator = isInitiator;
             StreamId = streamId;
+            Id = string.Format(isInitiator ? "Initiator-{0}" : "Receiver-{0}", streamId);
         }
 
         public PipeReader Input => UpstreamPipe.Reader;
@@ -28,5 +32,7 @@ namespace Libp2p.Net.Streams
         public void Dispose()
         {
         }
+
+        public MultiAddress RemoteAddress { get; }
     }
 }

@@ -1,14 +1,16 @@
 ﻿using System.IO.Pipelines;
 using System.Net.Sockets;
+using Multiformats.Net;
 
 namespace Libp2p.Net.Transport.Tcp
 {
-    internal class TcpConnection : IConnection, IDuplexPipe
+    internal class TcpConnection : IConnection
     {
         private readonly TcpClient _tcpClient;
 
-        internal TcpConnection(TcpClient tcpClient)
+        internal TcpConnection(MultiAddress address, TcpClient tcpClient)
         {
+            RemoteAddress = address;
             _tcpClient = tcpClient;
             var stream = _tcpClient.GetStream();
             Input = PipeReader.Create(stream, new StreamPipeReaderOptions(leaveOpen: true));
@@ -25,5 +27,7 @@ namespace Libp2p.Net.Transport.Tcp
             Output.Complete();
             _tcpClient.Dispose();
         }
+
+        public MultiAddress RemoteAddress { get; }
     }
 }

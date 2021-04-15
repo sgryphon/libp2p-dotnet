@@ -2,8 +2,9 @@
 {
     public enum ProtocolType
     {
-        Ip4 = 0x4,
-        Tcp = 0x6,
-        Ip6 = 0x29
+        Ip4 = 4,
+        Tcp = 6,
+        Ip6 = 41,
+        Memory = 777
     }
 }

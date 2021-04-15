@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Libp2p.Net.Transport;
 using Libp2p.UnitTesting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Multiformats.Net;
 using Shouldly;
 
 namespace Libp2p.Net.Streams.Tests
@@ -24,7 +25,8 @@ namespace Libp2p.Net.Streams.Tests
             
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
-            var pipeConnection = new PipeConnection(inputPipe.Reader, outputPipe.Writer);
+            var pipeConnection =
+                new PipeConnection(MultiAddress.Parse("/memory/test"), inputPipe.Reader, outputPipe.Writer);
             var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
             var connection1 = await multiplexer.ConnectAsync(cancellation.Token);
 
@@ -58,7 +60,8 @@ namespace Libp2p.Net.Streams.Tests
             
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
-            var pipeConnection = new PipeConnection(inputPipe.Reader, outputPipe.Writer);
+            var pipeConnection =
+                new PipeConnection(MultiAddress.Parse("/memory/test"), inputPipe.Reader, outputPipe.Writer);
             var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
             var connection1 = await multiplexer.ConnectAsync(cancellation.Token);
             var connection2 = await multiplexer.ConnectAsync(cancellation.Token);
@@ -103,7 +106,8 @@ namespace Libp2p.Net.Streams.Tests
             
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
-            var pipeConnection = new PipeConnection(inputPipe.Reader, outputPipe.Writer);
+            var pipeConnection =
+                new PipeConnection(MultiAddress.Parse("/memory/test"), inputPipe.Reader, outputPipe.Writer);
             var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
             var connection1 = await multiplexer.ConnectAsync(cancellation.Token);
 

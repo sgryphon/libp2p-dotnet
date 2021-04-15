@@ -1,6 +1,7 @@
 ﻿using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Multiformats.Net;
 
 namespace Libp2p.Net.Transport.Tcp
 {
@@ -16,7 +17,8 @@ namespace Libp2p.Net.Transport.Tcp
         public async Task<IConnection> AcceptConnectionAsync(CancellationToken cancellationToken = default)
         {
             var tcpClient = await _tcpListener.AcceptTcpClientAsync().ConfigureAwait(false);
-            var connection = new TcpConnection(tcpClient);
+            var address = tcpClient.Client.RemoteEndPoint.ToMultiAddress();
+            var connection = new TcpConnection(address, tcpClient);
             return connection;
         }
 

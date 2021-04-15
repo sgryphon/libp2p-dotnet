@@ -7,6 +7,7 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Multiformats.Net;
 
 namespace Libp2p.Net.Streams
 {
@@ -30,7 +31,7 @@ namespace Libp2p.Net.Streams
         public async Task<IConnection> ConnectAsync(CancellationToken cancellationToken = default)
         {
             var streamId = Interlocked.Increment(ref _nextStreamId);
-            var connection = new MplexConnection(true, streamId);
+            var connection = new MplexConnection(_innerConnection!.RemoteAddress, true, streamId);
             await StartConnectionAsync(connection, cancellationToken);
             return connection;
         }
@@ -154,7 +155,7 @@ namespace Libp2p.Net.Streams
 
         private async Task ReceiveNewStreamAsync(int streamId, CancellationToken cancellationToken)
         {
-            var newConnection = new MplexConnection(false, streamId);
+            var newConnection = new MplexConnection(_innerConnection!.RemoteAddress, false, streamId);
             await StartConnectionAsync(newConnection, cancellationToken);
             await _connectionsReceived.Writer.WriteAsync(newConnection, cancellationToken);
         }

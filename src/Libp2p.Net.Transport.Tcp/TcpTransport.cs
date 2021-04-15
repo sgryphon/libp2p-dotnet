@@ -12,7 +12,7 @@ namespace Libp2p.Net.Transport.Tcp
             var endpoint = address.ToIPEndPoint();
             var tcpClient = new TcpClient();
             await tcpClient.ConnectAsync(endpoint.Address, endpoint.Port).ConfigureAwait(false);
-            var connection = new TcpConnection(tcpClient);
+            var connection = new TcpConnection(address, tcpClient);
             return connection;
         }
 

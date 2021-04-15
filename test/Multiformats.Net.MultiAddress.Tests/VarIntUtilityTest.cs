@@ -2,7 +2,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Shouldly;
 
-namespace Libp2p.Net.Tests
+namespace Multiformats.Net.Tests
 {
     [TestClass]
     public class VarIntUtilityTest
