@@ -5,6 +5,6 @@ namespace Libp2p.Net
 {
     public interface IMultiplexer : IConnectionListener
     {
-        public Task<IConnection> ConnectAsync(CancellationToken cancellationToken = default);
+        Task<IConnection> ConnectAsync(CancellationToken cancellationToken = default);
     }
 }

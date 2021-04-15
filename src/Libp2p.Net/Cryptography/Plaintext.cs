@@ -3,13 +3,13 @@ using System.Threading.Tasks;
 
 namespace Libp2p.Net.Cryptography
 {
-    public class Plaintext : IProtocol
+    public class Plaintext : IEncryptionProtocol
     {
         public string Name => "Plaintext";
         
-        public Task StartAsync(IConnection connection, CancellationToken cancellationToken = default)
+        public Task<IConnection> StartEncryptionAsync(IConnection connection, CancellationToken cancellationToken = default)
         {
-            throw new System.NotImplementedException();
+            return Task.FromResult(connection);
         }
     }
 }

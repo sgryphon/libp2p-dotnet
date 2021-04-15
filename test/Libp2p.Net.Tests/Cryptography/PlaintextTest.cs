@@ -10,11 +10,11 @@ using Libp2p.Net.Cryptography;
 using Libp2p.Net.Transport;
 using Libp2p.UnitTesting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Multiformats.Net;
 using Shouldly;
 
 namespace Libp2p.Net.Tests.Cryptography
 {
-/*
     [TestClass]
     public class PlaintextTest
     {
@@ -27,22 +27,18 @@ namespace Libp2p.Net.Tests.Cryptography
             
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
-            var pipeConnection = new PipeConnection(inputPipe.Reader, outputPipe.Writer);
-            //await protocolPlaintext.StartAsync(pipeConnection, cancellation.Token);
+            var pipeConnection = new PipeConnection(MultiAddress.Parse("/memory/test"), inputPipe.Reader, outputPipe.Writer);
+            var encryptedConnection = await protocolPlaintext.StartEncryptionAsync(pipeConnection, cancellation.Token);
 
             // Act
-            // TODO: Send some bytes
-            // await inputPipe.Writer.WriteAsync(new byte[] {0x1, 0x2, 0x3}, cancellation.Token);
+            _ = await encryptedConnection.Output.WriteAsync(new byte[] {0x1, 0x2, 0x3}, cancellation.Token);
 
             // Assert
-            // TODO: Read the bytes (should be plain text)
-            //var bytes = await PipeUtility.ReadBytesTimeoutAsync(outputPipe.Reader, 3,
-            //    TimeSpan.FromMilliseconds(100), cancellation.Token);
-            //bytes[0].ShouldBe((byte)0x1);
-            //bytes[0].ShouldBe((byte)0x2);
-            //bytes[0].ShouldBe((byte)0x3);
+            var bytes = await PipeUtility.ReadBytesTimeoutAsync(outputPipe.Reader, 3,
+                TimeSpan.FromMilliseconds(100), cancellation.Token);
+            bytes[0].ShouldBe((byte)0x1);
+            bytes[1].ShouldBe((byte)0x2);
+            bytes[2].ShouldBe((byte)0x3);
         }
-
     }
-    */
 }

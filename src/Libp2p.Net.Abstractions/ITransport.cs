@@ -6,9 +6,10 @@ namespace Libp2p.Net
 {
     public interface ITransport
     {
-        public Task<IConnection> ConnectAsync(MultiAddress address, CancellationToken cancellationToken = default);
+        string Name { get; }
 
-        public Task<IConnectionListener> ListenAsync(MultiAddress address,
-            CancellationToken cancellationToken = default);
+        Task<IConnection> ConnectAsync(MultiAddress address, CancellationToken cancellationToken = default);
+
+        Task<IConnectionListener> ListenAsync(MultiAddress address, CancellationToken cancellationToken = default);
     }
 }

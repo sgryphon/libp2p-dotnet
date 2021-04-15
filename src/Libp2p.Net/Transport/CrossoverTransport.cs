@@ -14,6 +14,8 @@ namespace Libp2p.Net.Transport
             new Dictionary<MultiAddress, ConnectionListener>();
         private int _nextConnectionId;
 
+        public string Name => "Crossover";
+
         public async Task<IConnection> ConnectAsync(MultiAddress address, CancellationToken cancellationToken = default)
         {
             if (!_listeners.TryGetValue(address, out var listener))

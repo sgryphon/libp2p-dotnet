@@ -7,6 +7,8 @@ namespace Libp2p.Net.Transport.Tcp
 {
     public class TcpTransport : ITransport
     {
+        public string Name => "TCP";
+
         public async Task<IConnection> ConnectAsync(MultiAddress address, CancellationToken cancellationToken = default)
         {
             var endpoint = address.ToIPEndPoint();
