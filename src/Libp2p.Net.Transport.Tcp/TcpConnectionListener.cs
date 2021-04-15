@@ -18,7 +18,7 @@ namespace Libp2p.Net.Transport.Tcp
         {
             var tcpClient = await _tcpListener.AcceptTcpClientAsync().ConfigureAwait(false);
             var address = tcpClient.Client.RemoteEndPoint.ToMultiAddress();
-            var connection = new TcpConnection(address, tcpClient);
+            var connection = new TcpConnection(Direction.Inbound, address, tcpClient);
             return connection;
         }
 

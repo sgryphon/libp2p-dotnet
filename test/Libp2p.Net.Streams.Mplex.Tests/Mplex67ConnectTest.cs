@@ -1,7 +1,6 @@
 using System;
 using System.IO.Pipelines;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Libp2p.Net.Transport;
@@ -27,7 +26,8 @@ namespace Libp2p.Net.Streams.Tests
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
             var pipeConnection =
-                new PipeConnection(MultiAddress.Parse("/memory/test"), inputPipe.Reader, outputPipe.Writer);
+                new PipeConnection(Direction.Outbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
+                    outputPipe.Writer);
             var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
 
             // Act
@@ -56,7 +56,8 @@ namespace Libp2p.Net.Streams.Tests
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
             var pipeConnection =
-                new PipeConnection(MultiAddress.Parse("/memory/test"), inputPipe.Reader, outputPipe.Writer);
+                new PipeConnection(Direction.Outbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
+                    outputPipe.Writer);
             var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
 
             // Act
@@ -67,15 +68,16 @@ namespace Libp2p.Net.Streams.Tests
             // Assert
             var bytes = await PipeUtility.ReadBytesTimeoutAsync(outputPipe.Reader, 2 + 2 + 3,
                 TimeSpan.FromMilliseconds(100), cancellation.Token);
+            ((MplexConnection)connection).StreamId.ShouldBe(1);
+            ((MplexConnection)connection).Direction.ShouldBe(Direction.Outbound);
             var expected = new byte[] {0x08, 0}
                 .Concat(new byte[]
                 {
-                    0x09, // stream ID 1 + MessageInitiator (1) 
+                    0x0a, // stream ID 1 + MessageInitiator (2) 
                     3, // length
                     0x81, 0x82, 0x83
                 });
             bytes.ShouldBe(expected);
-            ((MplexConnection)connection).StreamId.ShouldBe(1);
             
             diagnostics.GetExceptions().ShouldBeEmpty();
         }
@@ -93,7 +95,8 @@ namespace Libp2p.Net.Streams.Tests
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
             var pipeConnection =
-                new PipeConnection(MultiAddress.Parse("/memory/test"), inputPipe.Reader, outputPipe.Writer);
+                new PipeConnection(Direction.Outbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
+                    outputPipe.Writer);
             var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
 
             // Act
@@ -109,8 +112,8 @@ namespace Libp2p.Net.Streams.Tests
                 TimeSpan.FromMilliseconds(100), cancellation.Token);
             var expected = new byte[] {0x08, 0}
                 .Concat(new byte[] {0x10, 0})
-                .Concat(new byte[] {0x09, 3, 0x81, 0x82, 0x83})
-                .Concat(new byte[] {0x11, 4, 0x91, 0x92, 0x93, 0x94});
+                .Concat(new byte[] {0x0a, 3, 0x81, 0x82, 0x83})
+                .Concat(new byte[] {0x12, 4, 0x91, 0x92, 0x93, 0x94});
             bytes.ShouldBe(expected);
             ((MplexConnection)connection2).StreamId.ShouldBe(2);
             

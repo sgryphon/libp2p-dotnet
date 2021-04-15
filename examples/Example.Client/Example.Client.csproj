@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\src\Libp2p.Net.Abstractions\Libp2p.Net.Abstractions.csproj" />
+      <ProjectReference Include="..\..\src\Libp2p.Net.Protocol.MultistreamSelect\Libp2p.Net.Protocol.MultistreamSelect.csproj" />
+      <ProjectReference Include="..\..\src\Libp2p.Net.Streams.Mplex\Libp2p.Net.Streams.Mplex.csproj" />
+      <ProjectReference Include="..\..\src\Libp2p.Net.Transport.Tcp\Libp2p.Net.Transport.Tcp.csproj" />
+      <ProjectReference Include="..\..\src\Libp2p.Peering\Libp2p.Peering.csproj" />
+      <ProjectReference Include="..\Example.Protocol\Example.Protocol.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.14" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="3.1.14" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.14" />
+      <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="3.1.14" />
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <Reference Include="JetBrains.ReSharper.TestRunner.Merged, Version=1.2.9.54, Culture=neutral, PublicKeyToken=5c492ec4f3eccde3">
+        <HintPath>..\..\..\..\..\..\snap\rider\189\lib\ReSharperHost\TestRunner\netcoreapp2.0\JetBrains.ReSharper.TestRunner.Merged.dll</HintPath>
+      </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\src\Libp2p.Net.Abstractions\Libp2p.Net.Abstractions.csproj" />
+    </ItemGroup>
+
+</Project>

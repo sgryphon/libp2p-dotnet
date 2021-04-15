@@ -7,6 +7,7 @@ namespace Libp2p.Net
 {
     public interface IConnection : IDuplexPipe, IDisposable
     {
+        Direction Direction { get; }
         MultiAddress RemoteAddress { get; }
     }
 }

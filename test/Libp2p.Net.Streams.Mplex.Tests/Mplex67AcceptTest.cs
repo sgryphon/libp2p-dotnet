@@ -27,7 +27,8 @@ namespace Libp2p.Net.Streams.Tests
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
             var pipeConnection =
-                new PipeConnection(MultiAddress.Parse("/memory/test"), inputPipe.Reader, outputPipe.Writer);
+                new PipeConnection(Direction.Inbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
+                    outputPipe.Writer);
             var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
 
             var input = new byte[]
@@ -59,7 +60,8 @@ namespace Libp2p.Net.Streams.Tests
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
             var pipeConnection =
-                new PipeConnection(MultiAddress.Parse("/memory/test"), inputPipe.Reader, outputPipe.Writer);
+                new PipeConnection(Direction.Inbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
+                    outputPipe.Writer);
             var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
 
             var input = new byte[]
@@ -69,7 +71,7 @@ namespace Libp2p.Net.Streams.Tests
             };
             var input2 = new byte[]
             {
-                0x09, // stream ID 1 + MessageInitiator (1) 
+                0x0a, // stream ID 1 + MessageInitiator (2) 
                 3, // length
                 0x81, 0x82, 0x83
             };
@@ -103,7 +105,8 @@ namespace Libp2p.Net.Streams.Tests
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
             var pipeConnection =
-                new PipeConnection(MultiAddress.Parse("/memory/test"), inputPipe.Reader, outputPipe.Writer);
+                new PipeConnection(Direction.Inbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
+                    outputPipe.Writer);
             var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
 
             var input = new byte[]
@@ -116,12 +119,12 @@ namespace Libp2p.Net.Streams.Tests
                 0 // length
             }).Concat(new byte[]
             {
-                0x11, // stream ID 2 + MessageInitiator (1) 
+                0x12, // stream ID 2 + MessageInitiator (2) 
                 4, // length
                 0x91, 0x92, 0x93, 0x94
             }).Concat(new byte[]
             {
-                0x09, // stream ID 1 + MessageInitiator (1) 
+                0x0a, // stream ID 1 + MessageInitiator (2) 
                 3, // length
                 0x81, 0x82, 0x83
             }).ToArray();

@@ -12,6 +12,7 @@ namespace Libp2p.Net.Transport
     {
         private readonly IDictionary<MultiAddress, ConnectionListener> _listeners =
             new Dictionary<MultiAddress, ConnectionListener>();
+
         private int _nextConnectionId;
 
         public string Name => "Crossover";
@@ -26,11 +27,13 @@ namespace Libp2p.Net.Transport
             var connectorToListenerPipe = new Pipe();
             var listenerToConnectorPipe = new Pipe();
             var connectorConnection =
-                new PipeConnection(address, listenerToConnectorPipe.Reader, connectorToListenerPipe.Writer);
-            
+                new PipeConnection(Direction.Outbound, address, listenerToConnectorPipe.Reader,
+                    connectorToListenerPipe.Writer);
+
             var connectionId = Interlocked.Increment(ref _nextConnectionId);
             var localAddress = MultiAddress.Parse($"/memory/{connectionId}");
-            var listenerConnection = new PipeConnection(localAddress, connectorToListenerPipe.Reader, listenerToConnectorPipe.Writer);
+            var listenerConnection = new PipeConnection(Direction.Inbound, localAddress, connectorToListenerPipe.Reader,
+                listenerToConnectorPipe.Writer);
 
             await listener.ConnectionChannel.Writer.WriteAsync(listenerConnection, cancellationToken)
                 .ConfigureAwait(false);

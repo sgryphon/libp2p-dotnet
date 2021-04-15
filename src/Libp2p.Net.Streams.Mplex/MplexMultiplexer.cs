@@ -13,9 +13,10 @@ namespace Libp2p.Net.Streams
 {
     public class MplexMultiplexer : IMultiplexer
     {
-        private readonly IDictionary<(bool, int), Task> _connectionReaderTasks = new Dictionary<(bool, int), Task>();
-        private readonly IDictionary<(bool, int), MplexConnection> _connections =
-            new Dictionary<(bool, int), MplexConnection>();
+        private readonly IDictionary<(Direction, int), Task> _connectionReaderTasks =
+            new Dictionary<(Direction, int), Task>();
+        private readonly IDictionary<(Direction, int), MplexConnection> _connections =
+            new Dictionary<(Direction, int), MplexConnection>();
         private readonly IConnection? _innerConnection;
         private readonly SemaphoreSlim _innerConnectionOutputWriteLock = new SemaphoreSlim(1, 1);
         private Task? _innerConnectionReaderTask;
@@ -31,7 +32,7 @@ namespace Libp2p.Net.Streams
         public async Task<IConnection> ConnectAsync(CancellationToken cancellationToken = default)
         {
             var streamId = Interlocked.Increment(ref _nextStreamId);
-            var connection = new MplexConnection(_innerConnection!.RemoteAddress, true, streamId);
+            var connection = new MplexConnection(Direction.Outbound, _innerConnection!.RemoteAddress, streamId);
             await StartConnectionAsync(connection, cancellationToken);
             return connection;
         }
@@ -155,7 +156,7 @@ namespace Libp2p.Net.Streams
 
         private async Task ReceiveNewStreamAsync(int streamId, CancellationToken cancellationToken)
         {
-            var newConnection = new MplexConnection(_innerConnection!.RemoteAddress, false, streamId);
+            var newConnection = new MplexConnection(Direction.Inbound, _innerConnection!.RemoteAddress, streamId);
             await StartConnectionAsync(newConnection, cancellationToken);
             await _connectionsReceived.Writer.WriteAsync(newConnection, cancellationToken);
         }
@@ -163,7 +164,7 @@ namespace Libp2p.Net.Streams
         private ValueTask<FlushResult> WriteUpstreamMessageAsync(MessageFlag messageFlag, int streamId,
             ReadOnlySequence<byte> buffer, CancellationToken cancellationToken)
         {
-            var key = (messageFlag == MessageFlag.MessageInitiator, streamId);
+            var key = (messageFlag == MessageFlag.MessageInitiator ? Direction.Inbound : Direction.Outbound, streamId);
             if (!_connections.TryGetValue(key, out var connection))
             {
                 if (Mplex67.s_diagnosticSource.IsEnabled(Mplex67.Diagnostics.UnknownStream))
@@ -204,8 +205,7 @@ namespace Libp2p.Net.Streams
                         if (Mplex67.s_diagnosticSource.IsEnabled(Mplex67.Diagnostics.ConnectionRead))
                         {
                             activity = new Activity(Mplex67.Diagnostics.ConnectionRead);
-                            activity.AddTag("Initiator", connection.IsInitiator.ToString());
-                            activity.AddTag("StreamId", connection.StreamId.ToString(CultureInfo.InvariantCulture));
+                            activity.AddTag("Stream", connection.Id);
                             activity.Start();
                             activity = Mplex67.s_diagnosticSource.StartActivity(activity, activity);
                         }
@@ -213,7 +213,10 @@ namespace Libp2p.Net.Streams
                         var buffer = result.Buffer;
                         if (buffer.Length > 0)
                         {
-                            var header = (connection.StreamId << 3) | (connection.IsInitiator ? 0x1 : 0x2);
+                            var header = (connection.StreamId << 3) |
+                                         (int)(connection.Direction == Direction.Inbound
+                                             ? MessageFlag.MessageReceiver
+                                             : MessageFlag.MessageInitiator);
                             var chunkSize = Mplex67.MaximumMessageSizeBytes - 10;
                             while (buffer.Length > chunkSize)
                             {
@@ -330,9 +333,9 @@ namespace Libp2p.Net.Streams
             CancellationToken cancellationToken = default)
         {
             // TODO: Diagnostic activity to create/start connection & send header
-            _connections[(connection.IsInitiator, connection.StreamId)] = connection;
+            _connections[(connection.Direction, connection.StreamId)] = connection;
             
-            if (connection.IsInitiator)
+            if (connection.Direction == Direction.Outbound)
             {
                 // Send header
                 var newStreamHeader = connection.StreamId << 3;
@@ -342,7 +345,7 @@ namespace Libp2p.Net.Streams
 
             // Start upstream connection reader
             var connectionReaderTask = ExecuteUpstreamConnectionReaderAsync(connection);
-            _connectionReaderTasks[(connection.IsInitiator, connection.StreamId)] = connectionReaderTask;
+            _connectionReaderTasks[(connection.Direction, connection.StreamId)] = connectionReaderTask;
         }
 
         public void Dispose()

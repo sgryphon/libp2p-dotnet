@@ -26,14 +26,15 @@ namespace Libp2p.Net.Streams.Tests
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
             var pipeConnection =
-                new PipeConnection(MultiAddress.Parse("/memory/test"), inputPipe.Reader, outputPipe.Writer);
+                new PipeConnection(Direction.Outbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
+                    outputPipe.Writer);
             var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
             var connection1 = await multiplexer.ConnectAsync(cancellation.Token);
 
             // Act
             var input = new byte[]
             {
-                0x0a, // stream ID 1 + MessageReceiver (2) 
+                0x09, // stream ID 1 + MessageReceiver (1) 
                 3, // length
                 0x81, 0x82, 0x83
             };
@@ -61,7 +62,8 @@ namespace Libp2p.Net.Streams.Tests
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
             var pipeConnection =
-                new PipeConnection(MultiAddress.Parse("/memory/test"), inputPipe.Reader, outputPipe.Writer);
+                new PipeConnection(Direction.Outbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
+                    outputPipe.Writer);
             var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
             var connection1 = await multiplexer.ConnectAsync(cancellation.Token);
             var connection2 = await multiplexer.ConnectAsync(cancellation.Token);
@@ -69,12 +71,12 @@ namespace Libp2p.Net.Streams.Tests
             // Act
             var input = new byte[]
             {
-                0x12, // stream ID 2 + MessageReceiver (2) 
+                0x11, // stream ID 2 + MessageReceiver (1) 
                 4, // length
                 0x91, 0x92, 0x93, 0x94
             }.Concat(new byte[]
             {
-                0x0a, // stream ID 1 + MessageReceiver (2) 
+                0x09, // stream ID 1 + MessageReceiver (1) 
                 3, // length
                 0x81, 0x82, 0x83
             }).ToArray();
@@ -107,7 +109,8 @@ namespace Libp2p.Net.Streams.Tests
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
             var pipeConnection =
-                new PipeConnection(MultiAddress.Parse("/memory/test"), inputPipe.Reader, outputPipe.Writer);
+                new PipeConnection(Direction.Outbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
+                    outputPipe.Writer);
             var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
             var connection1 = await multiplexer.ConnectAsync(cancellation.Token);
 

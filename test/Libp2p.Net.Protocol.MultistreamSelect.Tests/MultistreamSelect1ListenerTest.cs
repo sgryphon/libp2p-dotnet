@@ -28,7 +28,8 @@ namespace Libp2p.Net.Protocol.Tests
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
             var pipeConnection =
-                new PipeConnection(MultiAddress.Parse("/memory/test"), inputPipe.Reader, outputPipe.Writer);
+                new PipeConnection(Direction.Inbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
+                    outputPipe.Writer);
             await protocolSelect.StartAsync(pipeConnection, cancellation.Token);
 
             // Act
@@ -59,7 +60,8 @@ namespace Libp2p.Net.Protocol.Tests
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
             var pipeConnection =
-                new PipeConnection(MultiAddress.Parse("/memory/test"), inputPipe.Reader, outputPipe.Writer);
+                new PipeConnection(Direction.Inbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
+                    outputPipe.Writer);
             await protocolSelect.StartAsync(pipeConnection, cancellation.Token);
             
             // Act
@@ -94,7 +96,8 @@ namespace Libp2p.Net.Protocol.Tests
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
             var pipeConnection =
-                new PipeConnection(MultiAddress.Parse("/memory/test"), inputPipe.Reader, outputPipe.Writer);
+                new PipeConnection(Direction.Inbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
+                    outputPipe.Writer);
             await protocolSelect.StartAsync(pipeConnection, cancellation.Token);
             
             // Act
@@ -136,7 +139,8 @@ namespace Libp2p.Net.Protocol.Tests
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
             var pipeConnection =
-                new PipeConnection(MultiAddress.Parse("/memory/test"), inputPipe.Reader, outputPipe.Writer);
+                new PipeConnection(Direction.Inbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
+                    outputPipe.Writer);
             await protocolSelect.StartAsync(pipeConnection, cancellation.Token);
             
             // Act
@@ -176,7 +180,8 @@ namespace Libp2p.Net.Protocol.Tests
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
             var pipeConnection =
-                new PipeConnection(MultiAddress.Parse("/memory/test"), inputPipe.Reader, outputPipe.Writer);
+                new PipeConnection(Direction.Inbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
+                    outputPipe.Writer);
             await protocolSelect.StartAsync(pipeConnection, cancellation.Token);
 
             // Act

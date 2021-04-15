@@ -6,23 +6,28 @@ namespace Libp2p.Net.Streams
 {
     public class MplexConnection : IConnection
     {
-        public string Id { get; }
-        public bool IsInitiator { get; }
-        public int StreamId { get; }
         private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
 
-        internal MplexConnection(MultiAddress address, bool isInitiator, int streamId)
+        internal MplexConnection(Direction direction, MultiAddress address, int streamId)
         {
+            Direction = direction;
             RemoteAddress = address;
-            IsInitiator = isInitiator;
             StreamId = streamId;
-            Id = string.Format(isInitiator ? "Initiator-{0}" : "Receiver-{0}", streamId);
+            Id = $"{direction}-{streamId}";
         }
 
+        public Direction Direction { get; }
+        
+        public string Id { get; }
+        
         public PipeReader Input => UpstreamPipe.Reader;
-
+        
         public PipeWriter Output => DownstreamPipe.Writer;
         
+        public MultiAddress RemoteAddress { get; }
+        
+        public int StreamId { get; }
+
         internal Pipe DownstreamPipe { get; } = new Pipe();
 
         internal CancellationToken StoppingToken => _stoppingCts.Token;
@@ -32,7 +37,5 @@ namespace Libp2p.Net.Streams
         public void Dispose()
         {
         }
-
-        public MultiAddress RemoteAddress { get; }
     }
 }
