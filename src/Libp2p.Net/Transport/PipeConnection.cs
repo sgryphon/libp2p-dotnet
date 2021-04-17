@@ -3,7 +3,7 @@ using Multiformats.Net;
 
 namespace Libp2p.Net.Transport
 {
-    public class PipeConnection : IConnection
+    public class PipeConnection : ITransportConnection
     {
         public PipeConnection(Direction direction, MultiAddress address, PipeReader input, PipeWriter output)
         {

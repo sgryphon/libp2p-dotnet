@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Security.Cryptography.Xml;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,10 +11,8 @@ using Microsoft.AspNetCore.Authentication;
 namespace Libp2p.Net.Protocol
 {
     // See: https://github.com/multiformats/multistream-select
-    public class MultistreamSelect1 : Dictionary<string, IProtocol>, IProtocolSelect
+    public class MultistreamSelect1<T> : Dictionary<string, T>, IProtocolSelect<T> where T: class
     {
-        private Task? _executingTask;
-        private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
         private const string Identifier = "/multistream/1.0.0";
         private const string Na = "na";
 
@@ -34,15 +33,12 @@ namespace Libp2p.Net.Protocol
 
         public static ISystemClock SystemClock { get; set; } = new SystemClock();
 
-        protected async Task ExecuteAsync(IConnection connection, CancellationToken stoppingToken = default)
+        public async Task<T?> SelectProtocolAsync(IPipeline pipeline, CancellationToken cancellationToken = default)
         {
             try
             {
-                var protocol = await NegotiateProtocol(connection, stoppingToken);
-                if (protocol != null)
-                {
-                    await protocol.StartAsync(connection, stoppingToken);
-                }
+                var protocol = await NegotiateProtocol(pipeline, cancellationToken);
+                return protocol;
             }
             catch (Exception ex)
             {
@@ -50,19 +46,9 @@ namespace Libp2p.Net.Protocol
                 {
                     s_diagnosticSource.Write(Diagnostics.Exception, ex);
                 }
-            }
-        }
 
-        public Task StartAsync(IConnection connection, CancellationToken cancellationToken = default)
-        {
-            _executingTask = ExecuteAsync(connection, _stoppingCts.Token);
-            if (_executingTask.IsCompleted)
-            {
-                // Bubble any cancellation or failure
-                return _executingTask;
+                return null;
             }
-
-            return Task.CompletedTask;
         }
 
         private static class Diagnostics
@@ -72,7 +58,7 @@ namespace Libp2p.Net.Protocol
             public const string ReadPipeActivity = "MultistreamSelect.ReadPipe";
             public const string ReplyNa = "MultistreamSelect.ReplyNa";
         }
-
+        
         private static byte[] GetLengthPrefixedNewlineTerminatedBytes(string s)
         {
             // From the examples, this appears to simply be length prefixed with a protobuf varint;
@@ -94,7 +80,7 @@ namespace Libp2p.Net.Protocol
             return bytes;
         }
 
-        private async Task<IProtocol?> NegotiateProtocol(IConnection connection, CancellationToken cancellationToken)
+        private async Task<T?> NegotiateProtocol(IPipeline pipeline, CancellationToken cancellationToken)
         {
             var activity = default(Activity);
             try
@@ -110,7 +96,7 @@ namespace Libp2p.Net.Protocol
                 var matchedBytes = 0;
                 while (true)
                 {
-                    var result = await connection.Input.ReadAsync(cancellationToken).ConfigureAwait(false);
+                    var result = await pipeline.Input.ReadAsync(cancellationToken).ConfigureAwait(false);
                     var buffer = result.Buffer;
                     if (!TryMatchPosition(buffer, ref matchedPosition, ref matchedBytes))
                     {
@@ -121,38 +107,38 @@ namespace Libp2p.Net.Protocol
                     if (matchedBytes == s_identifierBytes.Length)
                     {
                         // Header fully matched
-                        connection.Input.AdvanceTo(matchedPosition!.Value, matchedPosition.Value);
+                        pipeline.Input.AdvanceTo(matchedPosition!.Value, matchedPosition.Value);
                         break;
                     }
 
-                    connection.Input.AdvanceTo(buffer.Start, matchedPosition!.Value);
+                    pipeline.Input.AdvanceTo(buffer.Start, matchedPosition!.Value);
                 }
 
                 // Respond with header
-                var headerFlush = await connection.Output.WriteAsync(s_identifierBytes, cancellationToken)
+                var headerFlush = await pipeline.Output.WriteAsync(s_identifierBytes, cancellationToken)
                     .ConfigureAwait(false);
 
                 // Find length
                 int protocolLength;
                 while (true)
                 {
-                    var result = await connection.Input.ReadAsync(cancellationToken).ConfigureAwait(false);
+                    var result = await pipeline.Input.ReadAsync(cancellationToken).ConfigureAwait(false);
                     var buffer = result.Buffer;
                     if (buffer.TryReadVarInt(out var consumed, out var length))
                     {
                         var endLengthPosition = buffer.GetPosition(consumed, buffer.Start);
-                        connection.Input.AdvanceTo(endLengthPosition, endLengthPosition);
+                        pipeline.Input.AdvanceTo(endLengthPosition, endLengthPosition);
                         protocolLength = length;
                         break;
                     }
 
-                    connection.Input.AdvanceTo(buffer.Start, buffer.End);
+                    pipeline.Input.AdvanceTo(buffer.Start, buffer.End);
                 }
 
                 // Read protocol
                 while (true)
                 {
-                    var result = await connection.Input.ReadAsync(cancellationToken).ConfigureAwait(false);
+                    var result = await pipeline.Input.ReadAsync(cancellationToken).ConfigureAwait(false);
                     var buffer = result.Buffer;
                     if (buffer.Length >= protocolLength)
                     {
@@ -164,13 +150,13 @@ namespace Libp2p.Net.Protocol
                             if (s_diagnosticSource.IsEnabled(Diagnostics.ProtocolSelected))
                             {
                                 s_diagnosticSource.Write(Diagnostics.ProtocolSelected,
-                                    new {ProtocolId = protocolId, ProtocolName = protocol.Name});
+                                    new {ProtocolId = protocolId});
                             }
 
                             // Reply protocol name
-                            var lengthFlush = await connection.Output
+                            var lengthFlush = await pipeline.Output
                                 .WriteVarIntAsync(protocolIdBytes.Length, cancellationToken).ConfigureAwait(false);
-                            var bytesFlush = await connection.Output.WriteAsync(protocolIdBytes, cancellationToken)
+                            var bytesFlush = await pipeline.Output.WriteAsync(protocolIdBytes, cancellationToken)
                                 .ConfigureAwait(false);
                             return protocol;
                         }
@@ -181,13 +167,13 @@ namespace Libp2p.Net.Protocol
                                 s_diagnosticSource.Write(Diagnostics.ReplyNa, new {ProtocolId = protocolId});
                             }
 
-                            var naFlush = await connection.Output.WriteAsync(s_naBytes, cancellationToken)
+                            var naFlush = await pipeline.Output.WriteAsync(s_naBytes, cancellationToken)
                                 .ConfigureAwait(false);
                             return null;
                         }
                     }
 
-                    connection.Input.AdvanceTo(buffer.Start, buffer.End);
+                    pipeline.Input.AdvanceTo(buffer.Start, buffer.End);
                 }
             }
             finally

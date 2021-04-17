@@ -8,12 +8,12 @@ namespace Libp2p.Peering
 {
     public class PeerPool
     {
-        public void ConfigureConnect(IList<ITransport> transports, IList<IProtocolSelect> selectors, IList<IEncryptionProtocol> encryptors, IList<IMultiplexProtocol> multiplexers)
+        public void ConfigureConnect(IList<ITransport> transports, IList<IEncryptionProtocol> encryptors, IList<IMultiplexProtocol> multiplexers)
         {
             //throw new NotImplementedException();
         }
 
-        public void ConfigureListen(IList<ITransport> transports, IList<IProtocolSelect> selectors, IList<IEncryptionProtocol> encryptors, IList<IMultiplexProtocol> multiplexers)
+        public void ConfigureListen(IList<ITransport> transports, IList<IEncryptionProtocol> encryptors, IList<IMultiplexProtocol> multiplexers)
         {
             //throw new NotImplementedException();
         }

@@ -8,8 +8,8 @@ namespace Libp2p.Net
     {
         string Name { get; }
 
-        Task<IConnection> ConnectAsync(MultiAddress address, CancellationToken cancellationToken = default);
+        Task<ITransportConnection> ConnectAsync(MultiAddress address, CancellationToken cancellationToken = default);
 
-        Task<IConnectionListener> ListenAsync(MultiAddress address, CancellationToken cancellationToken = default);
+        Task<ITransportListener> ListenAsync(MultiAddress address, CancellationToken cancellationToken = default);
     }
 }

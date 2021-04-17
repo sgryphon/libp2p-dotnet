@@ -7,7 +7,8 @@ namespace Libp2p.Net
     {
         string Name { get; }
 
-        Task<IMultiplexer> StartMultiplexerAsync(IConnection connection, CancellationToken cancellationToken = default);
+        Task<IMultiplexer> StartMultiplexerAsync(IPipeline pipeline, ITransportConnection transportConnection,
+            CancellationToken cancellationToken = default);
         //public Task<IConnectionListener> ListenAsync(CancellationToken cancellationToken = default);
     }
 }

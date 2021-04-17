@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Multiformats.Net;
 
 namespace Libp2p.Net.Streams
 {
@@ -14,10 +15,10 @@ namespace Libp2p.Net.Streams
         
         public string Name { get; } = "Mplex 6.7.0";
 
-        public async Task<IMultiplexer> StartMultiplexerAsync(IConnection connection,
+        public async Task<IMultiplexer> StartMultiplexerAsync(IPipeline pipeline, ITransportConnection transportConnection,
             CancellationToken cancellationToken = default)
         {
-            var multiplexer = new MplexMultiplexer(connection);
+            var multiplexer = new MplexMultiplexer(pipeline, transportConnection.RemoteAddress);
             await multiplexer.StartAsync(cancellationToken);
             return multiplexer;
         }

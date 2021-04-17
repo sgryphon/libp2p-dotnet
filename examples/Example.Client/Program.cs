@@ -37,17 +37,24 @@ namespace Example.Client
                 .ToArray();
             
             var transports = new ITransport[] {new TcpTransport()};
-            var selectors = new IProtocolSelect[] {new MultistreamSelect1()};
             var encryptors = new IEncryptionProtocol[] {new Plaintext()};
+            var encryptorSelectors = new IProtocolSelect<IEncryptionProtocol>[] {new MultistreamSelect1<IEncryptionProtocol>
+            {
+                ["/plaintext/1.0.0"] = new Plaintext()
+            }};
             var multiplexers = new IMultiplexProtocol[] {new Mplex67()};
+            var multiplexerSelectors = new IProtocolSelect<IMultiplexProtocol>[] {new MultistreamSelect1<IMultiplexProtocol>
+            {
+                ["/mplex/6.7.0"] = new Mplex67()
+            }};
             var discovery = new IDiscovery[] {new BootstrapDiscovery(bootstrapAddresses)};
 
             var statusProtocol = new StatusProtocol();
             var beaconBlocksByRange = new BeaconBlocksByRangeProtocol();
             
             var peerPool = new PeerPool();
-            peerPool.ConfigureConnect(transports, selectors, encryptors, multiplexers);
-            peerPool.ConfigureListen(transports, selectors, encryptors, multiplexers);
+            peerPool.ConfigureConnect(transports, encryptors, multiplexers);
+            peerPool.ConfigureListen(transports, encryptors, multiplexers);
             peerPool.AddDiscovery(discovery);
             peerPool.MinimumDesired = minimumDesired;
 
@@ -56,6 +63,10 @@ namespace Example.Client
 
             while (true)
             {
+                // Should this be AcceptMultiplexer ??
+                // Or look at node library Connection (upgraded, i.e. is a multiplexer) vs MultiAddressConnection
+                // Would it make sense to be similar to the node API ?
+                // https://github.com/libp2p/js-libp2p-interfaces
                 var connection = await peerPool.AcceptConnectionAsync(cts.Token);
                 if (connection.Direction == Direction.Outbound)
                 {

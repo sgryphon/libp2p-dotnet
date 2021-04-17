@@ -29,7 +29,7 @@ namespace Libp2p.Net.Streams.Tests
             var pipeConnection =
                 new PipeConnection(Direction.Inbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
                     outputPipe.Writer);
-            var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
+            var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, pipeConnection, cancellation.Token);
 
             var input = new byte[]
             {
@@ -62,7 +62,7 @@ namespace Libp2p.Net.Streams.Tests
             var pipeConnection =
                 new PipeConnection(Direction.Inbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
                     outputPipe.Writer);
-            var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
+            var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, pipeConnection, cancellation.Token);
 
             var input = new byte[]
             {
@@ -107,7 +107,7 @@ namespace Libp2p.Net.Streams.Tests
             var pipeConnection =
                 new PipeConnection(Direction.Inbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
                     outputPipe.Writer);
-            var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
+            var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, pipeConnection, cancellation.Token);
 
             var input = new byte[]
             {

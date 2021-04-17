@@ -4,7 +4,7 @@ using Multiformats.Net;
 
 namespace Libp2p.Net.Transport.Tcp
 {
-    internal class TcpConnection : IConnection
+    internal class TcpConnection : ITransportConnection
     {
         private readonly TcpClient _tcpClient;
 

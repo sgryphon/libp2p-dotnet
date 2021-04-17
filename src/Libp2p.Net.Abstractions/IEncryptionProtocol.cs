@@ -7,6 +7,6 @@ namespace Libp2p.Net
     {
         string Name { get; }
 
-        Task<IConnection> StartEncryptionAsync(IConnection connection, CancellationToken cancellationToken = default);
+        Task<IPipeline> StartEncryptionAsync(IPipeline pipeline, CancellationToken cancellationToken = default);
     }
 }

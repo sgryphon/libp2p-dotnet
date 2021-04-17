@@ -12,12 +12,12 @@ namespace Libp2p.Net
             _transport = transport;
         }
 
-        public async Task<IConnection> ConnectAsync(MultiAddress address)
+        public async Task<ITransportConnection> ConnectAsync(MultiAddress address)
         {
             return await _transport.ConnectAsync(address).ConfigureAwait(false);
         }
 
-        public async Task<IConnectionListener> ListenAsync(MultiAddress address)
+        public async Task<ITransportListener> ListenAsync(MultiAddress address)
         {
             return await _transport.ListenAsync(address).ConfigureAwait(false);
         }

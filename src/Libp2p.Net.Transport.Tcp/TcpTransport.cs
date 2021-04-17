@@ -9,7 +9,7 @@ namespace Libp2p.Net.Transport.Tcp
     {
         public string Name => "TCP";
 
-        public async Task<IConnection> ConnectAsync(MultiAddress address, CancellationToken cancellationToken = default)
+        public async Task<ITransportConnection> ConnectAsync(MultiAddress address, CancellationToken cancellationToken = default)
         {
             var endpoint = address.ToIPEndPoint();
             var tcpClient = new TcpClient();
@@ -18,14 +18,14 @@ namespace Libp2p.Net.Transport.Tcp
             return connection;
         }
 
-        public Task<IConnectionListener> ListenAsync(MultiAddress address,
+        public Task<ITransportListener> ListenAsync(MultiAddress address,
             CancellationToken cancellationToken = default)
         {
             var endpoint = address.ToIPEndPoint();
             var tcpListener = new TcpListener(endpoint);
             tcpListener.Start();
-            var connectionListener = new TcpConnectionListener(tcpListener);
-            return Task.FromResult<IConnectionListener>(connectionListener);
+            var connectionListener = new TcpTransportListener(tcpListener);
+            return Task.FromResult<ITransportListener>(connectionListener);
         }
     }
 }

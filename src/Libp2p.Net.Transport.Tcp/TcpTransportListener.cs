@@ -5,16 +5,16 @@ using Multiformats.Net;
 
 namespace Libp2p.Net.Transport.Tcp
 {
-    internal class TcpConnectionListener : IConnectionListener
+    internal class TcpTransportListener : ITransportListener
     {
         private readonly TcpListener _tcpListener;
 
-        internal TcpConnectionListener(TcpListener tcpListener)
+        internal TcpTransportListener(TcpListener tcpListener)
         {
             _tcpListener = tcpListener;
         }
 
-        public async Task<IConnection> AcceptConnectionAsync(CancellationToken cancellationToken = default)
+        public async Task<ITransportConnection> AcceptConnectionAsync(CancellationToken cancellationToken = default)
         {
             var tcpClient = await _tcpListener.AcceptTcpClientAsync().ConfigureAwait(false);
             var address = tcpClient.Client.RemoteEndPoint.ToMultiAddress();

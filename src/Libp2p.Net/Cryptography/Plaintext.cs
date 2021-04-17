@@ -7,10 +7,10 @@ namespace Libp2p.Net.Cryptography
     {
         public string Name => "Plaintext";
 
-        public Task<IConnection> StartEncryptionAsync(IConnection connection,
+        public Task<IPipeline> StartEncryptionAsync(IPipeline pipeline,
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(connection);
+            return Task.FromResult(pipeline);
         }
     }
 }
