@@ -3,10 +3,8 @@ using System.Threading.Tasks;
 
 namespace Libp2p.Net
 {
-    public interface IEncryptionProtocol
+    public interface IEncryptionProtocol : IProtocol
     {
-        string Name { get; }
-
         Task<IPipeline> StartEncryptionAsync(IPipeline pipeline, CancellationToken cancellationToken = default);
     }
 }

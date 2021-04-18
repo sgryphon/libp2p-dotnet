@@ -54,7 +54,7 @@ namespace Libp2p.Net.Transport
             public readonly Channel<ITransportConnection> ConnectionChannel =
                 Channel.CreateUnbounded<ITransportConnection>();
 
-            public async Task<ITransportConnection> AcceptConnectionAsync(CancellationToken cancellationToken = default)
+            public async Task<ITransportConnection> AcceptAsync(CancellationToken cancellationToken = default)
             {
                 var connection = await ConnectionChannel.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
                 return connection;

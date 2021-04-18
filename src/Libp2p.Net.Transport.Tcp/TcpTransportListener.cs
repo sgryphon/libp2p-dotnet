@@ -14,7 +14,7 @@ namespace Libp2p.Net.Transport.Tcp
             _tcpListener = tcpListener;
         }
 
-        public async Task<ITransportConnection> AcceptConnectionAsync(CancellationToken cancellationToken = default)
+        public async Task<ITransportConnection> AcceptAsync(CancellationToken cancellationToken = default)
         {
             var tcpClient = await _tcpListener.AcceptTcpClientAsync().ConfigureAwait(false);
             var address = tcpClient.Client.RemoteEndPoint.ToMultiAddress();

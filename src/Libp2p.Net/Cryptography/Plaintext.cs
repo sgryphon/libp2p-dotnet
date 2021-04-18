@@ -5,7 +5,7 @@ namespace Libp2p.Net.Cryptography
 {
     public class Plaintext : IEncryptionProtocol
     {
-        public string Name => "Plaintext";
+        public string Identifier => "/plaintext/1.0.0";
 
         public Task<IPipeline> StartEncryptionAsync(IPipeline pipeline,
             CancellationToken cancellationToken = default)

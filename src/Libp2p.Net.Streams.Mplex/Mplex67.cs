@@ -13,7 +13,7 @@ namespace Libp2p.Net.Streams
 
         internal static long MaximumMessageSizeBytes = 1_048_576; // 1 MiB
         
-        public string Name { get; } = "Mplex 6.7.0";
+        public string Identifier => "/mplex/6.7.0";
 
         public async Task<IMultiplexer> StartMultiplexerAsync(IPipeline pipeline, ITransportConnection transportConnection,
             CancellationToken cancellationToken = default)

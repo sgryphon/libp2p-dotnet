@@ -13,17 +13,19 @@ namespace Libp2p.Net.Streams
 {
     public class MplexMultiplexer : IMultiplexer
     {
+        private readonly SemaphoreSlim _downstreamOutputWriteLock = new SemaphoreSlim(1, 1);
+        private readonly IPipeline _downstreamPipeline;
+        private Task? _downstreamReaderTask;
+        private readonly Channel<MplexPipeline> _newConnectionsReceived = Channel.CreateUnbounded<MplexPipeline>();
+        private int _nextStreamId;
+        private readonly MultiAddress _remoteAddress;
+        private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
+
+        private readonly IDictionary<(Direction, int), MplexPipeline> _upstreamConnections =
+            new Dictionary<(Direction, int), MplexPipeline>();
+
         private readonly IDictionary<(Direction, int), Task> _upstreamReaderTasks =
             new Dictionary<(Direction, int), Task>();
-        private readonly IDictionary<(Direction, int), MplexConnection> _upstreamConnections =
-            new Dictionary<(Direction, int), MplexConnection>();
-        private readonly IPipeline _downstreamPipeline;
-        private readonly MultiAddress _remoteAddress;
-        private readonly SemaphoreSlim _downstreamOutputWriteLock = new SemaphoreSlim(1, 1);
-        private Task? _downstreamReaderTask;
-        private int _nextStreamId;
-        private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
-        private readonly Channel<MplexConnection> _newConnectionsReceived = Channel.CreateUnbounded<MplexConnection>();
 
         public MplexMultiplexer(IPipeline downstreamPipeline, MultiAddress remoteAddress)
         {
@@ -31,12 +33,22 @@ namespace Libp2p.Net.Streams
             _remoteAddress = remoteAddress;
         }
 
-        public async Task<IConnection> ConnectAsync(CancellationToken cancellationToken = default)
+        public async Task<IPipeline> AcceptAsync(CancellationToken cancellationToken = default)
+        {
+            var newConnection = await _newConnectionsReceived.Reader.ReadAsync(cancellationToken);
+            return newConnection;
+        }
+
+        public async Task<IPipeline> ConnectAsync(CancellationToken cancellationToken = default)
         {
             var streamId = Interlocked.Increment(ref _nextStreamId);
-            var connection = new MplexConnection(Direction.Outbound, _remoteAddress, streamId);
+            var connection = new MplexPipeline(Direction.Outbound, _remoteAddress, streamId);
             await StartConnectionAsync(connection, cancellationToken);
             return connection;
+        }
+
+        public void Dispose()
+        {
         }
 
         private async Task ExecuteInnerConnectionReaderAsync()
@@ -63,7 +75,7 @@ namespace Libp2p.Net.Streams
                         _downstreamPipeline.Input.AdvanceTo(buffer.GetPosition(consumed), buffer.End);
                         if (Mplex67.s_diagnosticSource.IsEnabled(Mplex67.Diagnostics.BytesRead))
                         {
-                            Mplex67.s_diagnosticSource.Write(Mplex67.Diagnostics.BytesRead, new { BytesRead = consumed });
+                            Mplex67.s_diagnosticSource.Write(Mplex67.Diagnostics.BytesRead, new {BytesRead = consumed});
                         }
                     }
                     finally
@@ -84,7 +96,67 @@ namespace Libp2p.Net.Streams
             }
         }
 
-        private async Task<long> ProcessInnerReaderMessages(ReadOnlySequence<byte> buffer, CancellationToken cancellationToken)
+        private async Task ExecuteUpstreamConnectionReaderAsync(MplexPipeline pipeline)
+        {
+            try
+            {
+                var connectionReader = pipeline.DownstreamPipe.Reader;
+                var cancellationToken = pipeline.StoppingToken;
+                while (true)
+                {
+                    var result = await connectionReader.ReadAsync(cancellationToken).ConfigureAwait(false);
+                    var activity = default(Activity);
+                    try
+                    {
+                        if (Mplex67.s_diagnosticSource.IsEnabled(Mplex67.Diagnostics.ConnectionRead))
+                        {
+                            activity = new Activity(Mplex67.Diagnostics.ConnectionRead);
+                            activity.AddTag("Stream", pipeline.Id);
+                            activity.Start();
+                            activity = Mplex67.s_diagnosticSource.StartActivity(activity, activity);
+                        }
+
+                        var buffer = result.Buffer;
+                        if (buffer.Length > 0)
+                        {
+                            var header = (pipeline.StreamId << 3) |
+                                         (int)(pipeline.Direction == Direction.Inbound
+                                             ? MessageFlag.MessageReceiver
+                                             : MessageFlag.MessageInitiator);
+                            var chunkSize = Mplex67.MaximumMessageSizeBytes - 10;
+                            while (buffer.Length > chunkSize)
+                            {
+                                await SemaphoreWriteDownstreamMessageAsync(header, buffer.Slice(0, chunkSize),
+                                    cancellationToken).ConfigureAwait(false);
+                                buffer = buffer.Slice(chunkSize);
+                            }
+
+                            await SemaphoreWriteDownstreamMessageAsync(header, buffer, cancellationToken)
+                                .ConfigureAwait(false);
+                        }
+
+                        connectionReader.AdvanceTo(buffer.End, buffer.End);
+                    }
+                    finally
+                    {
+                        if (activity != null)
+                        {
+                            Mplex67.s_diagnosticSource.StopActivity(activity, activity);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                if (Mplex67.s_diagnosticSource.IsEnabled(Mplex67.Diagnostics.Exception))
+                {
+                    Mplex67.s_diagnosticSource.Write(Mplex67.Diagnostics.Exception, ex);
+                }
+            }
+        }
+
+        private async Task<long> ProcessInnerReaderMessages(ReadOnlySequence<byte> buffer,
+            CancellationToken cancellationToken)
         {
             var consumed = 0L;
             while (true)
@@ -101,7 +173,7 @@ namespace Libp2p.Net.Streams
                 }
 
                 // TODO: Check length > 1 MiB (protocol violation)
-                
+
                 var totalLength = headerConsumed + lengthConsumed + length;
                 if (buffer.Length < totalLength)
                 {
@@ -110,7 +182,7 @@ namespace Libp2p.Net.Streams
 
                 await ProcessMessage(header, buffer.Slice(headerConsumed + lengthConsumed, length), cancellationToken)
                     .ConfigureAwait(false);
-                
+
                 buffer = buffer.Slice(totalLength);
                 consumed += totalLength;
             }
@@ -118,7 +190,8 @@ namespace Libp2p.Net.Streams
             return consumed;
         }
 
-        private async Task ProcessMessage(int header, ReadOnlySequence<byte> buffer, CancellationToken cancellationToken)
+        private async Task ProcessMessage(int header, ReadOnlySequence<byte> buffer,
+            CancellationToken cancellationToken)
         {
             var activity = default(Activity);
             try
@@ -158,97 +231,9 @@ namespace Libp2p.Net.Streams
 
         private async Task ReceiveNewStreamAsync(int streamId, CancellationToken cancellationToken)
         {
-            var newConnection = new MplexConnection(Direction.Inbound, _remoteAddress, streamId);
+            var newConnection = new MplexPipeline(Direction.Inbound, _remoteAddress, streamId);
             await StartConnectionAsync(newConnection, cancellationToken);
             await _newConnectionsReceived.Writer.WriteAsync(newConnection, cancellationToken);
-        }
-
-        private ValueTask<FlushResult> WriteUpstreamMessageAsync(MessageFlag messageFlag, int streamId,
-            ReadOnlySequence<byte> buffer, CancellationToken cancellationToken)
-        {
-            var key = (messageFlag == MessageFlag.MessageInitiator ? Direction.Inbound : Direction.Outbound, streamId);
-            if (!_upstreamConnections.TryGetValue(key, out var connection))
-            {
-                if (Mplex67.s_diagnosticSource.IsEnabled(Mplex67.Diagnostics.UnknownStream))
-                {
-                    Mplex67.s_diagnosticSource.Write(Mplex67.Diagnostics.UnknownStream, new {
-                        Key = key
-                    });
-                }
-
-                return new ValueTask<FlushResult>(new FlushResult());
-            }
-            
-            var upstreamBuffer = connection.UpstreamPipe.Writer.GetSpan((int)buffer.Length);
-
-            var index = 0;
-            foreach (var segment in buffer)
-            {
-                segment.Span.CopyTo(upstreamBuffer[index..]);
-                index += segment.Length;
-            }
-
-            connection.UpstreamPipe.Writer.Advance(index);
-            return connection.UpstreamPipe.Writer.FlushAsync(cancellationToken);
-        }
-
-        private async Task ExecuteUpstreamConnectionReaderAsync(MplexConnection connection)
-        {
-            try
-            {
-                var connectionReader = connection.DownstreamPipe.Reader;
-                var cancellationToken = connection.StoppingToken;
-                while (true)
-                {
-                    var result = await connectionReader.ReadAsync(cancellationToken).ConfigureAwait(false);
-                    var activity = default(Activity);
-                    try
-                    {
-                        if (Mplex67.s_diagnosticSource.IsEnabled(Mplex67.Diagnostics.ConnectionRead))
-                        {
-                            activity = new Activity(Mplex67.Diagnostics.ConnectionRead);
-                            activity.AddTag("Stream", connection.Id);
-                            activity.Start();
-                            activity = Mplex67.s_diagnosticSource.StartActivity(activity, activity);
-                        }
-
-                        var buffer = result.Buffer;
-                        if (buffer.Length > 0)
-                        {
-                            var header = (connection.StreamId << 3) |
-                                         (int)(connection.Direction == Direction.Inbound
-                                             ? MessageFlag.MessageReceiver
-                                             : MessageFlag.MessageInitiator);
-                            var chunkSize = Mplex67.MaximumMessageSizeBytes - 10;
-                            while (buffer.Length > chunkSize)
-                            {
-                                await SemaphoreWriteDownstreamMessageAsync(header, buffer.Slice(0, chunkSize),
-                                    cancellationToken).ConfigureAwait(false);
-                                buffer = buffer.Slice(chunkSize);
-                            }
-
-                            await SemaphoreWriteDownstreamMessageAsync(header, buffer, cancellationToken)
-                                .ConfigureAwait(false);
-                        }
-
-                        connectionReader.AdvanceTo(buffer.End, buffer.End);
-                    }
-                    finally
-                    {
-                        if (activity != null)
-                        {
-                            Mplex67.s_diagnosticSource.StopActivity(activity, activity);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                if (Mplex67.s_diagnosticSource.IsEnabled(Mplex67.Diagnostics.Exception))
-                {
-                    Mplex67.s_diagnosticSource.Write(Mplex67.Diagnostics.Exception, ex);
-                }
-            }
         }
 
         private async Task SemaphoreWriteDownstreamMessageAsync(int header, ReadOnlySequence<byte> buffer,
@@ -258,7 +243,7 @@ namespace Libp2p.Net.Streams
             {
                 throw new ArgumentOutOfRangeException(nameof(buffer), "Message size exceeds 1 MiB limit");
             }
-            
+
             int bytesWritten;
             await _downstreamOutputWriteLock.WaitAsync(cancellationToken);
             try
@@ -282,9 +267,10 @@ namespace Libp2p.Net.Streams
             {
                 _downstreamOutputWriteLock.Release();
             }
+
             if (Mplex67.s_diagnosticSource.IsEnabled(Mplex67.Diagnostics.BytesWritten))
             {
-                Mplex67.s_diagnosticSource.Write(Mplex67.Diagnostics.BytesWritten, new { BytesWritten = bytesWritten });
+                Mplex67.s_diagnosticSource.Write(Mplex67.Diagnostics.BytesWritten, new {BytesWritten = bytesWritten});
             }
         }
 
@@ -295,7 +281,7 @@ namespace Libp2p.Net.Streams
             {
                 throw new ArgumentOutOfRangeException(nameof(segment), "Message size exceeds 1 MiB limit");
             }
-            
+
             int bytesWritten;
             await _downstreamOutputWriteLock.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
@@ -313,9 +299,10 @@ namespace Libp2p.Net.Streams
             {
                 _downstreamOutputWriteLock.Release();
             }
+
             if (Mplex67.s_diagnosticSource.IsEnabled(Mplex67.Diagnostics.BytesWritten))
             {
-                Mplex67.s_diagnosticSource.Write(Mplex67.Diagnostics.BytesWritten, new { BytesWritten = bytesWritten });
+                Mplex67.s_diagnosticSource.Write(Mplex67.Diagnostics.BytesWritten, new {BytesWritten = bytesWritten});
             }
         }
 
@@ -331,33 +318,50 @@ namespace Libp2p.Net.Streams
             return Task.CompletedTask;
         }
 
-        private async Task StartConnectionAsync(MplexConnection connection,
+        private async Task StartConnectionAsync(MplexPipeline pipeline,
             CancellationToken cancellationToken = default)
         {
             // TODO: Diagnostic activity to create/start connection & send header
-            _upstreamConnections[(connection.Direction, connection.StreamId)] = connection;
-            
-            if (connection.Direction == Direction.Outbound)
+            _upstreamConnections[(pipeline.Direction, pipeline.StreamId)] = pipeline;
+
+            if (pipeline.Direction == Direction.Outbound)
             {
                 // Send header
-                var newStreamHeader = connection.StreamId << 3;
+                var newStreamHeader = pipeline.StreamId << 3;
                 var newStreamNameBytes = new byte[0];
                 await SemaphoreWriteDownstreamMessageAsync(newStreamHeader, newStreamNameBytes, cancellationToken);
             }
 
             // Start upstream connection reader
-            var connectionReaderTask = ExecuteUpstreamConnectionReaderAsync(connection);
-            _upstreamReaderTasks[(connection.Direction, connection.StreamId)] = connectionReaderTask;
+            var connectionReaderTask = ExecuteUpstreamConnectionReaderAsync(pipeline);
+            _upstreamReaderTasks[(pipeline.Direction, pipeline.StreamId)] = connectionReaderTask;
         }
 
-        public void Dispose()
+        private ValueTask<FlushResult> WriteUpstreamMessageAsync(MessageFlag messageFlag, int streamId,
+            ReadOnlySequence<byte> buffer, CancellationToken cancellationToken)
         {
-        }
+            var key = (messageFlag == MessageFlag.MessageInitiator ? Direction.Inbound : Direction.Outbound, streamId);
+            if (!_upstreamConnections.TryGetValue(key, out var connection))
+            {
+                if (Mplex67.s_diagnosticSource.IsEnabled(Mplex67.Diagnostics.UnknownStream))
+                {
+                    Mplex67.s_diagnosticSource.Write(Mplex67.Diagnostics.UnknownStream, new {Key = key});
+                }
 
-        public async Task<IConnection> AcceptConnectionAsync(CancellationToken cancellationToken = default)
-        {
-            var newConnection = await _newConnectionsReceived.Reader.ReadAsync(cancellationToken);
-            return newConnection;
+                return new ValueTask<FlushResult>(new FlushResult());
+            }
+
+            var upstreamBuffer = connection.UpstreamPipe.Writer.GetSpan((int)buffer.Length);
+
+            var index = 0;
+            foreach (var segment in buffer)
+            {
+                segment.Span.CopyTo(upstreamBuffer[index..]);
+                index += segment.Length;
+            }
+
+            connection.UpstreamPipe.Writer.Advance(index);
+            return connection.UpstreamPipe.Writer.FlushAsync(cancellationToken);
         }
     }
 }

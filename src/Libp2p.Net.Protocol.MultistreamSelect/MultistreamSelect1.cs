@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Security.Cryptography.Xml;
 using System.Text;
 using System.Threading;
@@ -11,7 +12,7 @@ using Microsoft.AspNetCore.Authentication;
 namespace Libp2p.Net.Protocol
 {
     // See: https://github.com/multiformats/multistream-select
-    public class MultistreamSelect1<T> : Dictionary<string, T>, IProtocolSelect<T> where T: class
+    public class MultistreamSelect1 : IProtocolSelect
     {
         private const string Identifier = "/multistream/1.0.0";
         private const string Na = "na";
@@ -31,13 +32,18 @@ namespace Libp2p.Net.Protocol
 
         public string Name => Identifier;
 
-        public static ISystemClock SystemClock { get; set; } = new SystemClock();
+        public Task<T?> SelectProtocolAsync<T>(IPipeline pipeline, T protocol, CancellationToken cancellationToken = default)
+            where T: class, IProtocol
+        {
+            throw new NotImplementedException();
+        }
 
-        public async Task<T?> SelectProtocolAsync(IPipeline pipeline, CancellationToken cancellationToken = default)
+        public async Task<T?> ListenProtocolAsync<T>(IPipeline pipeline, IList<T> protocols, CancellationToken cancellationToken = default)
+            where T: class, IProtocol
         {
             try
             {
-                var protocol = await NegotiateProtocol(pipeline, cancellationToken);
+                var protocol = await NegotiateProtocol(pipeline, protocols, cancellationToken);
                 return protocol;
             }
             catch (Exception ex)
@@ -80,7 +86,8 @@ namespace Libp2p.Net.Protocol
             return bytes;
         }
 
-        private async Task<T?> NegotiateProtocol(IPipeline pipeline, CancellationToken cancellationToken)
+        private async Task<T?> NegotiateProtocol<T>(IPipeline pipeline, IList<T> protocols, CancellationToken cancellationToken)
+            where T: class, IProtocol
         {
             var activity = default(Activity);
             try
@@ -145,7 +152,8 @@ namespace Libp2p.Net.Protocol
                         // TODO: Should just try and directly match the bytes
                         var protocolIdBytes = buffer.Slice(0, protocolLength).ToArray();
                         var protocolId = Encoding.UTF8.GetString(protocolIdBytes);
-                        if (TryGetValue(protocolId.TrimEnd('\n'), out var protocol))
+                        var protocol = protocols.SingleOrDefault(p => p.Identifier == protocolId.TrimEnd('\n'));
+                        if (protocol != null)
                         {
                             if (s_diagnosticSource.IsEnabled(Diagnostics.ProtocolSelected))
                             {
@@ -158,7 +166,6 @@ namespace Libp2p.Net.Protocol
                                 .WriteVarIntAsync(protocolIdBytes.Length, cancellationToken).ConfigureAwait(false);
                             var bytesFlush = await pipeline.Output.WriteAsync(protocolIdBytes, cancellationToken)
                                 .ConfigureAwait(false);
-                            return protocol;
                         }
                         else
                         {
@@ -169,8 +176,9 @@ namespace Libp2p.Net.Protocol
 
                             var naFlush = await pipeline.Output.WriteAsync(s_naBytes, cancellationToken)
                                 .ConfigureAwait(false);
-                            return null;
                         }
+
+                        return protocol;
                     }
 
                     pipeline.Input.AdvanceTo(buffer.Start, buffer.End);

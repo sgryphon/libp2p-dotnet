@@ -4,11 +4,11 @@ using Multiformats.Net;
 
 namespace Libp2p.Net.Streams
 {
-    public class MplexConnection : IConnection
+    public class MplexPipeline : IPipeline
     {
         private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
 
-        internal MplexConnection(Direction direction, MultiAddress address, int streamId)
+        internal MplexPipeline(Direction direction, MultiAddress address, int streamId)
         {
             Direction = direction;
             RemoteAddress = address;

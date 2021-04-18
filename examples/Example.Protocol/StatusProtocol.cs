@@ -7,9 +7,9 @@ namespace Example.Protocol
 {
     public class StatusProtocol : IProtocol
     {
-        public string Name => "StatusProtocol";
+        public string Identifier => "/eth2/beacon_chain/req/status/1/";
 
-        public Task StartAsync(IConnection connection, CancellationToken cancellationToken = default)
+        public Task StartAsync(IPipeline pipeline, CancellationToken cancellationToken = default)
         {
             throw new System.NotImplementedException();
         }

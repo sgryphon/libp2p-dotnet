@@ -3,8 +3,9 @@ using System.Threading.Tasks;
 
 namespace Libp2p.Net
 {
-    public interface IMultiplexer : IConnectionListener
+    public interface IMultiplexer
     {
-        Task<IConnection> ConnectAsync(CancellationToken cancellationToken = default);
+        Task<IPipeline> ConnectAsync(CancellationToken cancellationToken = default);
+        Task<IPipeline> AcceptAsync(CancellationToken cancellationToken = default);
     }
 }

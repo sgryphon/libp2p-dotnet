@@ -22,7 +22,7 @@ namespace HelloLibp2p
                 var client = new Libp2pClient(new TcpTransport());
                 using var listener = await client.ListenAsync(listenAddress);
                 Console.WriteLine("Listening");
-                using var connection = await listener.AcceptConnectionAsync();
+                using var connection = await listener.AcceptAsync();
                 Console.WriteLine("Accepted connection");
 
                 while (true)

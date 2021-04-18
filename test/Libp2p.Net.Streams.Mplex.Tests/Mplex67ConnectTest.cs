@@ -39,7 +39,7 @@ namespace Libp2p.Net.Streams.Tests
                 TimeSpan.FromMilliseconds(100), cancellation.Token);
             bytes[0].ShouldBe((byte)0x8); // stream ID 1 + NewStream (0)
             bytes[1].ShouldBe((byte)0x0); // stream name empty
-            ((MplexConnection)connection).StreamId.ShouldBe(1);
+            ((MplexPipeline)connection).StreamId.ShouldBe(1);
             
             diagnostics.GetExceptions().ShouldBeEmpty();
         }
@@ -68,8 +68,8 @@ namespace Libp2p.Net.Streams.Tests
             // Assert
             var bytes = await PipeUtility.ReadBytesTimeoutAsync(outputPipe.Reader, 2 + 2 + 3,
                 TimeSpan.FromMilliseconds(100), cancellation.Token);
-            ((MplexConnection)connection).StreamId.ShouldBe(1);
-            ((MplexConnection)connection).Direction.ShouldBe(Direction.Outbound);
+            ((MplexPipeline)connection).StreamId.ShouldBe(1);
+            ((MplexPipeline)connection).Direction.ShouldBe(Direction.Outbound);
             var expected = new byte[] {0x08, 0}
                 .Concat(new byte[]
                 {
@@ -115,7 +115,7 @@ namespace Libp2p.Net.Streams.Tests
                 .Concat(new byte[] {0x0a, 3, 0x81, 0x82, 0x83})
                 .Concat(new byte[] {0x12, 4, 0x91, 0x92, 0x93, 0x94});
             bytes.ShouldBe(expected);
-            ((MplexConnection)connection2).StreamId.ShouldBe(2);
+            ((MplexPipeline)connection2).StreamId.ShouldBe(2);
             
             diagnostics.GetExceptions().ShouldBeEmpty();
         }

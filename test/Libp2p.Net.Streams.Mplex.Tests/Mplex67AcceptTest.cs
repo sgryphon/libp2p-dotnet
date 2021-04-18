@@ -39,11 +39,11 @@ namespace Libp2p.Net.Streams.Tests
             var inputFlush = inputPipe.Writer.WriteAsync(input, cancellation.Token);
 
             // Act
-            var connection = await multiplexer.AcceptConnectionAsync(cancellation.Token);
+            var connection = await multiplexer.AcceptAsync(cancellation.Token);
             await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
 
             // Assert
-            ((MplexConnection)connection).StreamId.ShouldBe(1);
+            ((MplexPipeline)connection).StreamId.ShouldBe(1);
             
             diagnostics.GetExceptions().ShouldBeEmpty();
         }
@@ -76,7 +76,7 @@ namespace Libp2p.Net.Streams.Tests
                 0x81, 0x82, 0x83
             };
             var inputFlush = inputPipe.Writer.WriteAsync(input, cancellation.Token);
-            var connection = await multiplexer.AcceptConnectionAsync(cancellation.Token);
+            var connection = await multiplexer.AcceptAsync(cancellation.Token);
 
             // Act
             var inputFlush2 = inputPipe.Writer.WriteAsync(input2, cancellation.Token);
@@ -87,7 +87,7 @@ namespace Libp2p.Net.Streams.Tests
                 TimeSpan.FromMilliseconds(100), cancellation.Token);
             var expected = new byte[] {0x81, 0x82, 0x83};
             bytes.ShouldBe(expected);
-            ((MplexConnection)connection).StreamId.ShouldBe(1);
+            ((MplexPipeline)connection).StreamId.ShouldBe(1);
             
             diagnostics.GetExceptions().ShouldBeEmpty();
         }
@@ -131,8 +131,8 @@ namespace Libp2p.Net.Streams.Tests
             var inputFlush = inputPipe.Writer.WriteAsync(input, cancellation.Token);
 
             // Act
-            var connection = await multiplexer.AcceptConnectionAsync(cancellation.Token);
-            var connection2 = await multiplexer.AcceptConnectionAsync(cancellation.Token);
+            var connection = await multiplexer.AcceptAsync(cancellation.Token);
+            var connection2 = await multiplexer.AcceptAsync(cancellation.Token);
             await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
 
             // Assert
@@ -140,13 +140,13 @@ namespace Libp2p.Net.Streams.Tests
                 TimeSpan.FromMilliseconds(100), cancellation.Token);
             var expected = new byte[] {0x81, 0x82, 0x83};
             bytes.ShouldBe(expected);
-            ((MplexConnection)connection).StreamId.ShouldBe(1);
+            ((MplexPipeline)connection).StreamId.ShouldBe(1);
 
             var bytes2 = await PipeUtility.ReadBytesTimeoutAsync(connection2.Input, 4,
                 TimeSpan.FromMilliseconds(100), cancellation.Token);
             var expected2 = new byte[] {0x91, 0x92, 0x93, 0x94};
             bytes2.ShouldBe(expected2);
-            ((MplexConnection)connection2).StreamId.ShouldBe(2);
+            ((MplexPipeline)connection2).StreamId.ShouldBe(2);
 
             diagnostics.GetExceptions().ShouldBeEmpty();
         }

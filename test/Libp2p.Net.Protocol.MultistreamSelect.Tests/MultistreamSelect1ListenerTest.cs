@@ -23,7 +23,8 @@ namespace Libp2p.Net.Protocol.Tests
             
             // Arrange
             using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
-            var protocolSelect = new MultistreamSelect1<IProtocol>();
+            var testProtocol1 = new TestProtocol("/proto/test/1");
+            var protocolSelect = new MultistreamSelect1();
             
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
@@ -34,7 +35,8 @@ namespace Libp2p.Net.Protocol.Tests
             // Act
             await inputPipe.Writer.WriteAsync(new [] {(byte)19}, cancellation.Token);
             await inputPipe.Writer.WriteAsync(Encoding.UTF8.GetBytes("/multistream/1.0.0\n"), cancellation.Token);
-            var selectTask = protocolSelect.SelectProtocolAsync(pipeConnection, cancellation.Token);
+            var selectTask =
+                protocolSelect.ListenProtocolAsync(pipeConnection, new IProtocol[] {testProtocol1}, cancellation.Token);
             await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
 
             // Assert
@@ -53,9 +55,8 @@ namespace Libp2p.Net.Protocol.Tests
             
             // Arrange
             using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
-            var testProtocol1 = new TestProtocol();
-            var protocolSelect = (IProtocolSelect<IProtocol>)new MultistreamSelect1<IProtocol>();
-            protocolSelect.Add("/proto/test/1", testProtocol1);
+            var testProtocol1 = new TestProtocol("/proto/test/1");
+            var protocolSelect = (IProtocolSelect)new MultistreamSelect1();
             
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
@@ -64,7 +65,8 @@ namespace Libp2p.Net.Protocol.Tests
                     outputPipe.Writer);
             
             // Act
-            var selectTask = protocolSelect.SelectProtocolAsync(pipeConnection, cancellation.Token);
+            var selectTask =
+                protocolSelect.ListenProtocolAsync(pipeConnection, new IProtocol[] {testProtocol1}, cancellation.Token);
             await inputPipe.Writer.WriteAsync(new [] {(byte)19}, cancellation.Token);
             await inputPipe.Writer.WriteAsync(Encoding.UTF8.GetBytes("/multistream/1.0.0\n"), cancellation.Token);
             await inputPipe.Writer.WriteAsync(new [] {(byte)14}, cancellation.Token);
@@ -90,9 +92,8 @@ namespace Libp2p.Net.Protocol.Tests
             
             // Arrange
             using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
-            var testProtocol1 = new TestProtocol();
-            var protocolSelect = (IProtocolSelect<IProtocol>)new MultistreamSelect1<IProtocol>();
-            protocolSelect.Add("/proto/test/1", testProtocol1);
+            var testProtocol1 = new TestProtocol("/proto/test/1");
+            var protocolSelect = (IProtocolSelect)new MultistreamSelect1();
             
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
@@ -101,7 +102,8 @@ namespace Libp2p.Net.Protocol.Tests
                     outputPipe.Writer);
             
             // Act
-            var selectTask = protocolSelect.SelectProtocolAsync(pipeConnection, cancellation.Token);
+            var selectTask =
+                protocolSelect.ListenProtocolAsync(pipeConnection, new IProtocol[] {testProtocol1}, cancellation.Token);
             await inputPipe.Writer.WriteAsync(new [] {(byte)19}, cancellation.Token);
             await Task.Delay(TimeSpan.FromMilliseconds(5), cancellation.Token);
             await inputPipe.Writer.WriteAsync(Encoding.UTF8.GetBytes("/multistrea"), cancellation.Token);
@@ -134,9 +136,8 @@ namespace Libp2p.Net.Protocol.Tests
             
             // Arrange
             using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
-            var testProtocol1 = new TestProtocol();
-            var protocolSelect = new MultistreamSelect1<IProtocol>();
-            protocolSelect.Add("/proto/test/1", testProtocol1);
+            var testProtocol1 = new TestProtocol("/proto/test/1");
+            var protocolSelect = new MultistreamSelect1();
             
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
@@ -145,7 +146,8 @@ namespace Libp2p.Net.Protocol.Tests
                     outputPipe.Writer);
             
             // Act
-            var selectTask = protocolSelect.SelectProtocolAsync(pipeConnection, cancellation.Token);
+            var selectTask =
+                protocolSelect.ListenProtocolAsync(pipeConnection, new IProtocol[] {testProtocol1}, cancellation.Token);
             await inputPipe.Writer.WriteAsync(new [] {(byte)19}, cancellation.Token);
             await inputPipe.Writer.WriteAsync(Encoding.UTF8.GetBytes("/multistream/1.0.0\n"), cancellation.Token);
             await inputPipe.Writer.WriteAsync(new [] {(byte)15}, cancellation.Token);
@@ -171,14 +173,10 @@ namespace Libp2p.Net.Protocol.Tests
             
             // Arrange
             using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
-            var testProtocol1 = new TestProtocol();
-            var testProtocolOther = new TestProtocol();
-            var protocolSelect = new MultistreamSelect1<IProtocol>()
-            {
-                ["/proto/test/1"] = testProtocol1,
-                ["/proto/other"] = testProtocolOther,
-                ["/proto/test/2"] = testProtocol1,
-            };
+            var testProtocol1 = new TestProtocol("/proto/test/1");
+            var testProtocolOther = new TestProtocol("/proto/other");
+            var testProtocol2 = new TestProtocol("/proto/test/2");
+            var protocolSelect = new MultistreamSelect1();
             
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
@@ -187,7 +185,9 @@ namespace Libp2p.Net.Protocol.Tests
                     outputPipe.Writer);
 
             // Act
-            var selectTask = protocolSelect.SelectProtocolAsync(pipeConnection, cancellation.Token);
+            var selectTask =
+                protocolSelect.ListenProtocolAsync(pipeConnection,
+                    new IProtocol[] {testProtocol1, testProtocolOther, testProtocol2}, cancellation.Token);
             await inputPipe.Writer.WriteAsync(new [] {(byte)19}, cancellation.Token);
             await inputPipe.Writer.WriteAsync(Encoding.UTF8.GetBytes("/multistream/1.0.0\n"), cancellation.Token);
             await inputPipe.Writer.WriteAsync(new [] {(byte)13}, cancellation.Token);

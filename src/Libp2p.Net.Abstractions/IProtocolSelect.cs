@@ -1,11 +1,16 @@
-﻿using System.Threading;
+﻿using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Libp2p.Net
 {
-    public interface IProtocolSelect<T> where T: class
+    public interface IProtocolSelect
     {
-        void Add(string identifier, T protocol);
-        Task<T?> SelectProtocolAsync(IPipeline pipeline, CancellationToken cancellationToken = default);
+        Task<T?> SelectProtocolAsync<T>(IPipeline pipeline, T protocol, CancellationToken cancellationToken = default)
+            where T : class, IProtocol;
+
+        Task<T?> ListenProtocolAsync<T>(IPipeline pipeline, IList<T> protocols,
+            CancellationToken cancellationToken = default)
+            where T : class, IProtocol;
     }
 }

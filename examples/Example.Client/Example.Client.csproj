@@ -4,6 +4,7 @@
         <OutputType>Exe</OutputType>
         <TargetFramework>netcoreapp3.1</TargetFramework>
         <LangVersion>default</LangVersion>
+        <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>
@@ -19,6 +20,7 @@
       <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.14" />
       <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="3.1.14" />
       <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.14" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.14" />
       <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="3.1.14" />
       <PackageReference Include="System.Reactive" Version="5.0.0" />
     </ItemGroup>
