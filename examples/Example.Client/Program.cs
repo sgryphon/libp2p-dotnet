@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Example.Protocol;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,8 @@ namespace Example.Client
                 .ConfigureServices((hostContext, services) =>
                 {
                     services.AddHostedService<ExampleService>();
+                    services.AddSingleton<StatusProtocol>();
+                    services.AddSingleton<BeaconBlocksByRangeProtocol>();
                 });
     }
 }

@@ -21,23 +21,36 @@ namespace Example.Client
 {
     public class ExampleService : BackgroundService
     {
-        private List<IDisposable>? _allListeners = new();
+        private readonly List<IDisposable> _allListeners = new();
         private readonly ILogger _logger;
         private readonly IOptionsMonitor<DiscoverySettings> _discoverySettingsMonitor;
         private ConnectionPool? _connectionPool;
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private List<BeaconPeer> _beaconPeers = new List<BeaconPeer>();
         private List<Task> _beaconPeerTasks = new List<Task>();
-        private StatusProtocol _statusProtocol = new StatusProtocol();
-        private BeaconBlocksByRangeProtocol _beaconBlocksByRangeProtocol = new BeaconBlocksByRangeProtocol();
+        private StatusProtocol _statusProtocol;
+        private BeaconBlocksByRangeProtocol _beaconBlocksByRangeProtocol;
 
         public ExampleService(ILogger<ExampleService> logger,
-            IOptionsMonitor<DiscoverySettings> discoverySettingsMonitor)
+            IOptionsMonitor<DiscoverySettings> discoverySettingsMonitor,
+            StatusProtocol statusProtocol,
+            BeaconBlocksByRangeProtocol beaconBlocksByRangeProtocol)
         {
             _logger = logger;
             _discoverySettingsMonitor = discoverySettingsMonitor;
+            _statusProtocol = statusProtocol;
+            _beaconBlocksByRangeProtocol = beaconBlocksByRangeProtocol;
         }
-        
+
+        public override void Dispose()
+        {
+            foreach (var listener in _allListeners)
+            {
+                listener.Dispose();
+            }
+            base.Dispose();
+        }
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             SubscribeToAllLibp2pDiagnostics();
@@ -49,9 +62,6 @@ namespace Example.Client
             var encryptors = new IEncryptionProtocol[] {new Plaintext()};
             var multiplexers = new IMultiplexProtocol[] {new Mplex67()};
             var discovery = new IDiscovery[] {new BootstrapDiscovery(discoverySettings.BootstrapAddresses)};
-
-            _statusProtocol = new StatusProtocol();
-            _beaconBlocksByRangeProtocol = new BeaconBlocksByRangeProtocol();
 
             var peerPool = new PeerPool();
             peerPool.AddDiscovery(discovery);
@@ -91,11 +101,13 @@ namespace Example.Client
                 var peerAcceptTask = ProcessNewPipelineAsync(connection, _cancellationTokenSource.Token);
                 _beaconPeerTasks.Add(peerAcceptTask);
                 
+                // Do this inline to keep things simple for this example
+                // (could also add to a channel and have a separate reader handle)
                 if (connection.Direction == Direction.Outbound)
                 {
                     // A new outbound connection should initiate Status
                     var (pipeline, protocol) = await connection.ConnectAsync(_statusProtocol, _cancellationTokenSource.Token); // Need desired protocol
-                    await _statusProtocol.StartAsync(pipeline, _cancellationTokenSource.Token);
+                    await _statusProtocol.StartAsync(connection, pipeline, _cancellationTokenSource.Token);
                 }
             }
         }
@@ -104,7 +116,18 @@ namespace Example.Client
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                await connection.AcceptAsync(new IProtocol[] {_statusProtocol, _beaconBlocksByRangeProtocol}, _cancellationTokenSource.Token); // Need list of protocols
+                var (pipeline, protocol) = await connection.AcceptAsync(new IProtocol[] {_statusProtocol, _beaconBlocksByRangeProtocol}, _cancellationTokenSource.Token); // Need list of protocols
+                switch (protocol)
+                {
+                    case StatusProtocol statusProtocol:
+                        await statusProtocol.HandleAsync(connection, pipeline, cancellationToken);
+                        break;                        
+                    case BeaconBlocksByRangeProtocol beaconBlocksByRangeProtocol:
+                        await beaconBlocksByRangeProtocol.HandleAsync(connection, pipeline, cancellationToken);
+                        break;
+                    default:
+                        throw new NotSupportedException($"Protocol {protocol.GetType()} not supported");
+                }
             }
         }
         
