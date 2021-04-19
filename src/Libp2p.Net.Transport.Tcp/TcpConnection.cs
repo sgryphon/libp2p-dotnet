@@ -18,9 +18,12 @@ namespace Libp2p.Net.Transport.Tcp
             Output = PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
         }
 
+        public Direction Direction { get; }
+
         public PipeReader Input { get; }
 
         public PipeWriter Output { get; }
+        public MultiAddress RemoteAddress { get; }
 
         public void Dispose()
         {
@@ -28,8 +31,5 @@ namespace Libp2p.Net.Transport.Tcp
             Output.Complete();
             _tcpClient.Dispose();
         }
-
-        public Direction Direction { get; }
-        public MultiAddress RemoteAddress { get; }
     }
 }

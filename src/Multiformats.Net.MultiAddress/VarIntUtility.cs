@@ -31,14 +31,6 @@ namespace Multiformats.Net
             value = (long)varInt;
         }
 
-        public static void WriteVarInt(Span<byte> buffer, int value, out int bytesWritten)
-        {
-            if (!TryWriteVarInt(buffer, (uint)value, out bytesWritten))
-            {
-                throw new SerializationException("Failed to serialize varint");
-            }
-        }
-        
         public static bool TryReadVarInt(ReadOnlySpan<byte> buffer, out ulong value, out int bytesRead)
         {
             value = 0uL;
@@ -68,7 +60,7 @@ namespace Multiformats.Net
             bytesRead = 0;
             return false;
         }
-        
+
         public static bool TryWriteVarInt(Span<byte> buffer, ulong value, out int bytesWritten)
         {
             var index = 0;
@@ -79,7 +71,7 @@ namespace Multiformats.Net
                     bytesWritten = 0;
                     return false;
                 }
-                
+
                 if (value < 0x80)
                 {
                     buffer[index] = (byte)value;
@@ -93,6 +85,14 @@ namespace Multiformats.Net
 
             bytesWritten = index + 1;
             return true;
+        }
+
+        public static void WriteVarInt(Span<byte> buffer, int value, out int bytesWritten)
+        {
+            if (!TryWriteVarInt(buffer, (uint)value, out bytesWritten))
+            {
+                throw new SerializationException("Failed to serialize varint");
+            }
         }
     }
 }

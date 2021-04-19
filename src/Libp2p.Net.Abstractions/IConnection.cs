@@ -12,7 +12,13 @@ namespace Libp2p.Net
     {
         Direction Direction { get; }
         
+        MultiAddress LocalAddress { get; }
+        
         MultiAddress RemoteAddress { get; }
+
+        string RemotePeer { get; }
+
+        string LocalPeer { get; }
 
         IMultiplexProtocol MultiplexProtocol { get; }
         

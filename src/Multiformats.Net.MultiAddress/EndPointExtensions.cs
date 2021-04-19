@@ -13,7 +13,7 @@ namespace Multiformats.Net
             {
                 throw new NotImplementedException();
             }
-            
+
             var bytes = new List<byte>();
             // Protocol IP
             if (endPoint.AddressFamily == AddressFamily.InterNetwork)
@@ -28,6 +28,7 @@ namespace Multiformats.Net
             {
                 throw new InvalidOperationException();
             }
+
             bytes.AddRange(ipEndPoint.Address.GetAddressBytes());
 
             // Protocol TCP

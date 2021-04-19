@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Libp2p.Net;
 using Multiformats.Net;
 
-namespace Libp2p.Peering
+namespace Libp2p.Net
 {
     public class Connection : IConnection
     {
@@ -16,7 +16,10 @@ namespace Libp2p.Peering
         }
         
         public Direction Direction { get; }
+        public MultiAddress LocalAddress { get; }
         public MultiAddress RemoteAddress { get; }
+        public string RemotePeer { get; }
+        public string LocalPeer { get; }
         public IMultiplexProtocol MultiplexProtocol { get; }
         public IEncryptionProtocol EncryptionProtocol { get; }
 

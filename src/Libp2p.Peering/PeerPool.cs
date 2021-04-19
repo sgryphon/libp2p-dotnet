@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Libp2p.Net;
@@ -8,8 +7,8 @@ namespace Libp2p.Peering
 {
     public class PeerPool
     {
-        private List<IDiscovery> _discovery = new List<IDiscovery>();
-        
+        private readonly List<IDiscovery> _discovery = new List<IDiscovery>();
+
         public void AddDiscovery(IList<IDiscovery> discovery)
         {
             _discovery.AddRange(discovery);
