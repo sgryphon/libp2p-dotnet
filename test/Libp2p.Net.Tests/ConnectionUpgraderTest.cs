@@ -18,6 +18,8 @@ namespace Libp2p.Net.Tests
         [TestMethod]
         public async Task UpgradeCreatesConnection()
         {
+            using var diagnostics = new TestDiagnosticCollector();
+
             // Arrange
             using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
             var encryptors = new IEncryptionProtocol[] {new Plaintext()};
@@ -48,6 +50,8 @@ namespace Libp2p.Net.Tests
         [TestMethod]
         public async Task UpgradedCanConnectAndSendInBothDirections()
         {
+            using var diagnostics = new TestDiagnosticCollector();
+
             // NOTE: This is really testing Connection, not the upgrader, but there is no public constructor so we use upgrader to create
             
             // Arrange
@@ -91,6 +95,8 @@ namespace Libp2p.Net.Tests
         [TestMethod]
         public async Task UpgradedCanAcceptAndSendInBothDirections()
         {
+            using var diagnostics = new TestDiagnosticCollector();
+
             // NOTE: This is really testing Connection, not the upgrader, but there is no public constructor so we use upgrader to create
             
             // Arrange
