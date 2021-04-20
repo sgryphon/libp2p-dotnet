@@ -28,9 +28,8 @@ namespace Libp2p.Net.Protocol.Tests
             
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
-            var pipeConnection =
-                new PipeConnection(Direction.Inbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
-                    outputPipe.Writer);
+            var pipeConnection = new PipeConnection(MultiAddress.Parse("/memory/test1"),
+                MultiAddress.Parse("/memory/test2"), Direction.Inbound, inputPipe.Reader, outputPipe.Writer);
 
             // Act
             await inputPipe.Writer.WriteAsync(new [] {(byte)19}, cancellation.Token);
@@ -60,9 +59,8 @@ namespace Libp2p.Net.Protocol.Tests
             
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
-            var pipeConnection =
-                new PipeConnection(Direction.Inbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
-                    outputPipe.Writer);
+            var pipeConnection = new PipeConnection(MultiAddress.Parse("/memory/test1"),
+                MultiAddress.Parse("/memory/test2"), Direction.Inbound, inputPipe.Reader, outputPipe.Writer);
             
             // Act
             var selectTask =
@@ -97,9 +95,8 @@ namespace Libp2p.Net.Protocol.Tests
             
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
-            var pipeConnection =
-                new PipeConnection(Direction.Inbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
-                    outputPipe.Writer);
+            var pipeConnection = new PipeConnection(MultiAddress.Parse("/memory/test1"),
+                MultiAddress.Parse("/memory/test2"), Direction.Inbound, inputPipe.Reader, outputPipe.Writer);
             
             // Act
             var selectTask =
@@ -141,9 +138,8 @@ namespace Libp2p.Net.Protocol.Tests
             
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
-            var pipeConnection =
-                new PipeConnection(Direction.Inbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
-                    outputPipe.Writer);
+            var pipeConnection = new PipeConnection(MultiAddress.Parse("/memory/test1"),
+                MultiAddress.Parse("/memory/test2"), Direction.Inbound, inputPipe.Reader, outputPipe.Writer);
             
             // Act
             var selectTask =
@@ -180,9 +176,8 @@ namespace Libp2p.Net.Protocol.Tests
             
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
-            var pipeConnection =
-                new PipeConnection(Direction.Inbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
-                    outputPipe.Writer);
+            var pipeConnection = new PipeConnection(MultiAddress.Parse("/memory/test1"),
+                MultiAddress.Parse("/memory/test2"), Direction.Inbound, inputPipe.Reader, outputPipe.Writer);
 
             // Act
             var selectTask =

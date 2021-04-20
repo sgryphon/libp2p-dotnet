@@ -18,7 +18,6 @@ namespace Libp2p.Net.Streams
         private Task? _downstreamReaderTask;
         private readonly Channel<MplexPipeline> _newConnectionsReceived = Channel.CreateUnbounded<MplexPipeline>();
         private int _nextStreamId;
-        private readonly MultiAddress _remoteAddress;
         private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
 
         private readonly IDictionary<(Direction, int), MplexPipeline> _upstreamConnections =
@@ -27,10 +26,9 @@ namespace Libp2p.Net.Streams
         private readonly IDictionary<(Direction, int), Task> _upstreamReaderTasks =
             new Dictionary<(Direction, int), Task>();
 
-        public MplexMultiplexer(IPipeline downstreamPipeline, MultiAddress remoteAddress)
+        public MplexMultiplexer(IPipeline downstreamPipeline)
         {
             _downstreamPipeline = downstreamPipeline;
-            _remoteAddress = remoteAddress;
         }
 
         public async Task<IPipeline> AcceptAsync(CancellationToken cancellationToken = default)
@@ -42,7 +40,7 @@ namespace Libp2p.Net.Streams
         public async Task<IPipeline> ConnectAsync(CancellationToken cancellationToken = default)
         {
             var streamId = Interlocked.Increment(ref _nextStreamId);
-            var connection = new MplexPipeline(Direction.Outbound, _remoteAddress, streamId);
+            var connection = new MplexPipeline(Direction.Outbound, streamId);
             await StartConnectionAsync(connection, cancellationToken);
             return connection;
         }
@@ -231,7 +229,7 @@ namespace Libp2p.Net.Streams
 
         private async Task ReceiveNewStreamAsync(int streamId, CancellationToken cancellationToken)
         {
-            var newConnection = new MplexPipeline(Direction.Inbound, _remoteAddress, streamId);
+            var newConnection = new MplexPipeline(Direction.Inbound, streamId);
             await StartConnectionAsync(newConnection, cancellationToken);
             await _newConnectionsReceived.Writer.WriteAsync(newConnection, cancellationToken);
         }

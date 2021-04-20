@@ -1,17 +1,16 @@
-﻿using System.IO.Pipelines;
+﻿using System;
+using System.IO.Pipelines;
 using System.Threading;
-using Multiformats.Net;
 
 namespace Libp2p.Net.Streams
 {
-    public class MplexPipeline : IPipeline
+    public class MplexPipeline : IPipeline, IDisposable
     {
         private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
 
-        internal MplexPipeline(Direction direction, MultiAddress address, int streamId)
+        internal MplexPipeline(Direction direction, int streamId)
         {
             Direction = direction;
-            RemoteAddress = address;
             StreamId = streamId;
             Id = $"{direction}-{streamId}";
         }
@@ -24,8 +23,6 @@ namespace Libp2p.Net.Streams
         
         public PipeWriter Output => DownstreamPipe.Writer;
         
-        public MultiAddress RemoteAddress { get; }
-        
         public int StreamId { get; }
 
         internal Pipe DownstreamPipe { get; } = new Pipe();
@@ -36,6 +33,7 @@ namespace Libp2p.Net.Streams
 
         public void Dispose()
         {
+            _stoppingCts.Dispose();
         }
     }
 }

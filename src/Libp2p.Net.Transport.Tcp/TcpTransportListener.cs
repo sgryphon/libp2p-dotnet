@@ -9,16 +9,19 @@ namespace Libp2p.Net.Transport.Tcp
     {
         private readonly TcpListener _tcpListener;
 
-        internal TcpTransportListener(TcpListener tcpListener)
+        internal TcpTransportListener(MultiAddress localAddress, TcpListener tcpListener)
         {
+            LocalAddress = localAddress;
             _tcpListener = tcpListener;
         }
+
+        public MultiAddress? LocalAddress { get; }
 
         public async Task<ITransportConnection> AcceptAsync(CancellationToken cancellationToken = default)
         {
             var tcpClient = await _tcpListener.AcceptTcpClientAsync().ConfigureAwait(false);
-            var address = tcpClient.Client.RemoteEndPoint.ToMultiAddress();
-            var connection = new TcpConnection(Direction.Inbound, address, tcpClient);
+            var remoteAddress = tcpClient.Client.RemoteEndPoint.ToMultiAddress();
+            var connection = new TcpConnection(LocalAddress, remoteAddress, Direction.Inbound, tcpClient);
             return connection;
         }
 

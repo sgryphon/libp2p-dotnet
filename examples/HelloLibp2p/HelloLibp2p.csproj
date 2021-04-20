@@ -6,6 +6,8 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\src\Libp2p.Net.Protocol.MultistreamSelect\Libp2p.Net.Protocol.MultistreamSelect.csproj" />
+      <ProjectReference Include="..\..\src\Libp2p.Net.Streams.Mplex\Libp2p.Net.Streams.Mplex.csproj" />
       <ProjectReference Include="..\..\src\Libp2p.Net.Transport.Tcp\Libp2p.Net.Transport.Tcp.csproj" />
       <ProjectReference Include="..\..\src\Libp2p.Net\Libp2p.Net.csproj" />
       <ProjectReference Include="..\..\src\Multiformats.Net.MultiAddress\Multiformats.Net.MultiAddress.csproj" />

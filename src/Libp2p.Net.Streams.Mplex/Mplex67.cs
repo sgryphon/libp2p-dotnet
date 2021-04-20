@@ -15,10 +15,9 @@ namespace Libp2p.Net.Streams
         
         public string Identifier => "/mplex/6.7.0";
 
-        public async Task<IMultiplexer> StartMultiplexerAsync(IPipeline pipeline, ITransportConnection transportConnection,
-            CancellationToken cancellationToken = default)
+        public async Task<IMultiplexer> StartMultiplexerAsync(IPipeline pipeline, CancellationToken cancellationToken = default)
         {
-            var multiplexer = new MplexMultiplexer(pipeline, transportConnection.RemoteAddress);
+            var multiplexer = new MplexMultiplexer(pipeline);
             await multiplexer.StartAsync(cancellationToken);
             return multiplexer;
         }

@@ -8,10 +8,11 @@ namespace Libp2p.Net.Transport.Tcp
     {
         private readonly TcpClient _tcpClient;
 
-        internal TcpConnection(Direction direction, MultiAddress remoteAddress, TcpClient tcpClient)
+        internal TcpConnection(MultiAddress? localAddress, MultiAddress remoteAddress, Direction direction, TcpClient tcpClient)
         {
-            Direction = direction;
+            LocalAddress = localAddress;
             RemoteAddress = remoteAddress;
+            Direction = direction;
             _tcpClient = tcpClient;
             var stream = _tcpClient.GetStream();
             Input = PipeReader.Create(stream, new StreamPipeReaderOptions(leaveOpen: true));
@@ -19,10 +20,13 @@ namespace Libp2p.Net.Transport.Tcp
         }
 
         public Direction Direction { get; }
+        
+        public MultiAddress? LocalAddress { get; }
 
         public PipeReader Input { get; }
 
         public PipeWriter Output { get; }
+        
         public MultiAddress RemoteAddress { get; }
 
         public void Dispose()

@@ -6,6 +6,9 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using Libp2p.Net;
+using Libp2p.Net.Cryptography;
+using Libp2p.Net.Protocol;
+using Libp2p.Net.Streams;
 using Libp2p.Net.Transport.Tcp;
 using Multiformats.Net;
 
@@ -15,22 +18,32 @@ namespace HelloLibp2p
     {
         private static async Task Main(string[] args)
         {
+            var selectors = new IProtocolSelect[] {new MultistreamSelect1()};
+            var encryptors = new IEncryptionProtocol[] {new Plaintext()};
+            var multiplexers = new IMultiplexProtocol[] {new Mplex67()};
+            var upgrader = (IConnectionUpgrader)new ConnectionUpgrader(selectors, encryptors, multiplexers);
+                
+            var transports = new ITransport[] {new TcpTransport()};
+            using var client = new Libp2pClient(transports, upgrader);
+            
             if (args.Length > 0 && args[0] == "listen")
             {
                 Console.WriteLine("Press CTRL+C to exit");
                 var listenAddress = MultiAddress.Parse("/ip4/127.0.0.1/tcp/5001");
-                var client = new Libp2pClient(new TcpTransport());
-                using var listener = await client.ListenAsync(listenAddress);
-                Console.WriteLine("Listening");
-                using var connection = await listener.AcceptAsync();
-                Console.WriteLine("Accepted connection");
+                await client.ListenAsync(listenAddress);
+                Console.WriteLine("Listening on {0}", listenAddress);
+                using var connection = await client.AcceptAsync();
+                Console.WriteLine("Accepted {0} connection from {1} on {2}", connection.Direction,
+                    connection.RemoteAddress, connection.LocalAddress);
+                var (pipeline, protocolIdentifier) = await connection.AcceptAsync(new [] {"hello/1.0"});
+                Console.WriteLine("Accepted pipeline for {0}", protocolIdentifier);
 
                 while (true)
                 {
-                    var result = await connection.Input.ReadAsync();
+                    var result = await pipeline.Input.ReadAsync();
                     var buffer = result.Buffer;
                     ReadLine(ref buffer);
-                    connection.Input.AdvanceTo(buffer.Start, buffer.End);
+                    pipeline.Input.AdvanceTo(buffer.Start, buffer.End);
                     if (result.IsCompleted) break;
                     await Task.Delay(TimeSpan.Zero);
                 }
@@ -39,18 +52,22 @@ namespace HelloLibp2p
             if (args.Length > 0 && args[0] == "connect")
             {
                 var connectAddress = MultiAddress.Parse("/ip4/127.0.0.1/tcp/5001");
-                var client = new Libp2pClient(new TcpTransport());
                 using var connection = await client.ConnectAsync(connectAddress);
+                Console.WriteLine("Connected");
+                Console.WriteLine("Connected {0} to {1} from {2}", connection.Direction,
+                    connection.RemoteAddress, connection.LocalAddress);
+                var (pipeline, protocolIdentifier) = await connection.ConnectAsync("hello/1.0");
+                Console.WriteLine("Connected pipeline for {0}", protocolIdentifier);
 
                 Console.WriteLine("Press Enter to send Hello");
                 Console.ReadLine();
                 var sendBytes = Encoding.UTF8.GetBytes("Hello World!\n");
-                await connection.Output.WriteAsync(sendBytes);
+                await pipeline.Output.WriteAsync(sendBytes);
 
                 Console.WriteLine("Press Enter to send Goodbye");
                 Console.ReadLine();
                 var sendBytes2 = Encoding.UTF8.GetBytes("Goodbye P2P\n");
-                await connection.Output.WriteAsync(sendBytes2);
+                await pipeline.Output.WriteAsync(sendBytes2);
 
                 Console.WriteLine("Press Enter to exit");
                 Console.ReadLine();

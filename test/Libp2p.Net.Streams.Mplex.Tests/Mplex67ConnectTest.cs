@@ -25,10 +25,9 @@ namespace Libp2p.Net.Streams.Tests
             
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
-            var pipeConnection =
-                new PipeConnection(Direction.Outbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
-                    outputPipe.Writer);
-            var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, pipeConnection, cancellation.Token);
+            var pipeConnection = new PipeConnection(MultiAddress.Parse("/memory/test1"),
+                MultiAddress.Parse("/memory/test2"), Direction.Outbound, inputPipe.Reader, outputPipe.Writer);
+            var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
 
             // Act
             var connection = await multiplexer.ConnectAsync(cancellation.Token);
@@ -55,10 +54,9 @@ namespace Libp2p.Net.Streams.Tests
             
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
-            var pipeConnection =
-                new PipeConnection(Direction.Outbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
-                    outputPipe.Writer);
-            var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, pipeConnection, cancellation.Token);
+            var pipeConnection = new PipeConnection(MultiAddress.Parse("/memory/test1"),
+                MultiAddress.Parse("/memory/test2"), Direction.Outbound, inputPipe.Reader, outputPipe.Writer);
+            var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
 
             // Act
             var connection = await multiplexer.ConnectAsync(cancellation.Token);
@@ -94,10 +92,9 @@ namespace Libp2p.Net.Streams.Tests
             
             var inputPipe = new Pipe();
             var outputPipe = new Pipe();
-            var pipeConnection =
-                new PipeConnection(Direction.Outbound, MultiAddress.Parse("/memory/test"), inputPipe.Reader,
-                    outputPipe.Writer);
-            var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, pipeConnection, cancellation.Token);
+            var pipeConnection = new PipeConnection(MultiAddress.Parse("/memory/test1"),
+                MultiAddress.Parse("/memory/test2"), Direction.Outbound, inputPipe.Reader, outputPipe.Writer);
+            var multiplexer = await protocolMplex.StartMultiplexerAsync(pipeConnection, cancellation.Token);
 
             // Act
             var connection1 = await multiplexer.ConnectAsync(cancellation.Token);

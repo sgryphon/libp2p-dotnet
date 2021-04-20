@@ -14,4 +14,8 @@
       <PackageReference Include="System.IO.Pipelines" Version="5.0.1" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Protocol" />
+    </ItemGroup>
+
 </Project>
